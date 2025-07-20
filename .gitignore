@@ -1,0 +1,12 @@
+# Python
+venv/
+__pycache__/
+
+# Node / Vue
+node_modules/
+
+# Flask runtime
+instance/
+
+# Secrets
+.env
