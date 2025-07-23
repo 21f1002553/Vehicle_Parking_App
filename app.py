@@ -1,18 +1,19 @@
-from flask import Flask, jsonify, request
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask import Flask, jsonify
+from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
-from app import db
 
 # Load environment variables
 load_dotenv()
 
-# Initialize other extensions
+# Initialize extensions (but don't bind to app yet)
+from app.models import db
 jwt = JWTManager()
 
 def create_app():
+    """Application factory pattern"""
     print("🔧 Creating Flask app...")
     app = Flask(__name__)
     
@@ -29,171 +30,69 @@ def create_app():
     CORS(app)
     print("✅ Extensions initialized")
     
-    # Main routes
+    # Register blueprints
+    register_blueprints(app)
+    
+    # Main application routes (keep these minimal)
     @app.route('/')
     def index():
-        print("📍 Index route called")
         return jsonify({
-            'message': 'Vehicle Parking App API - UPDATED VERSION',
+            'message': 'Vehicle Parking App API',
             'status': 'running',
-            'version': '2.0',
-            'timestamp': 'July 23, 2025 - 23:30',
+            'version': '3.0',
             'endpoints': {
                 'health': '/api/health',
-                'login': '/api/auth/login',
-                'register': '/api/auth/register',
-                'profile': '/api/auth/profile',
-                'test_auth': '/api/auth/test',
-                'debug': '/debug'
+                'auth': '/api/auth/*',
+                'admin': '/api/admin/*',
+                'user': '/api/user/*',
+                'parking': '/api/parking/*'
             }
         })
     
     @app.route('/api/health')
     def health_check():
-        print("🏥 Health check called")
         return jsonify({
             'status': 'healthy', 
             'message': 'Vehicle Parking API is running',
-            'version': '2.0'
+            'version': '3.0'
         })
     
     @app.route('/debug')
     def debug():
-        print("🐛 Debug route called")
         return jsonify({
-            'message': 'DEBUG: New code is running!',
-            'routes_registered': len(app.url_map._rules),
-            'timestamp': 'July 23, 2025 - 23:30'
+            'message': 'DEBUG: Blueprint architecture active!',
+            'total_routes': len(app.url_map._rules),
+            'registered_blueprints': [bp.name for bp in app.blueprints.values()]
         })
-    
-    # AUTH ROUTES (inline for now)
-    @app.route('/api/auth/login', methods=['POST'])
-    def login():
-        print("🔐 Login route called")
-        try:
-            from app.models.user import User
-            
-            data = request.get_json()
-            
-            if not data:
-                return jsonify({'error': 'No data provided'}), 400
-            
-            email = data.get('email')
-            password = data.get('password')
-            
-            if not email or not password:
-                return jsonify({'error': 'Email and password required'}), 400
-            
-            user = User.query.filter_by(email=email).first()
-            
-            if not user or not user.check_password(password):
-                return jsonify({'error': 'Invalid credentials'}), 401
-            
-            if not user.is_active:
-                return jsonify({'error': 'Account is inactive'}), 401
-            
-            access_token = create_access_token(identity=user.id)
-            
-            return jsonify({
-                'message': 'Login successful',
-                'access_token': access_token,
-                'user': user.to_dict()
-            }), 200
-            
-        except Exception as e:
-            print(f"❌ Login error: {e}")
-            return jsonify({'error': str(e)}), 500
-
-    @app.route('/api/auth/register', methods=['POST'])
-    def register():
-        print("📝 Register route called")
-        try:
-            from app.models.user import User
-            
-            data = request.get_json()
-            
-            if not data:
-                return jsonify({'error': 'No data provided'}), 400
-            
-            required_fields = ['username', 'email', 'password', 'full_name', 'phone', 'address', 'pin_code']
-            for field in required_fields:
-                if not data.get(field):
-                    return jsonify({'error': f'{field} is required'}), 400
-            
-            if User.query.filter_by(email=data['email']).first():
-                return jsonify({'error': 'Email already registered'}), 400
-            
-            if User.query.filter_by(username=data['username']).first():
-                return jsonify({'error': 'Username already taken'}), 400
-            
-            user = User(
-                username=data['username'],
-                email=data['email'],
-                password=data['password'],
-                full_name=data['full_name'],
-                phone=data['phone'],
-                address=data['address'],
-                pin_code=data['pin_code'],
-                is_admin=False
-            )
-            
-            db.session.add(user)
-            db.session.commit()
-            
-            return jsonify({
-                'message': 'Registration successful',
-                'user': user.to_dict()
-            }), 201
-            
-        except Exception as e:
-            print(f"❌ Register error: {e}")
-            db.session.rollback()
-            return jsonify({'error': str(e)}), 500
-
-    @app.route('/api/auth/profile', methods=['GET'])
-    @jwt_required()
-    def get_profile():
-        print("👤 Profile route called")
-        try:
-            from app.models.user import User
-            
-            user_id = get_jwt_identity()
-            user = User.query.get(user_id)
-            
-            if not user:
-                return jsonify({'error': 'User not found'}), 404
-            
-            return jsonify({'user': user.to_dict()}), 200
-            
-        except Exception as e:
-            print(f"❌ Profile error: {e}")
-            return jsonify({'error': str(e)}), 500
-
-    @app.route('/api/auth/test', methods=['GET'])
-    def test_auth_routes():
-        print("🧪 Test auth route called")
-        return jsonify({
-            'message': 'Auth routes are working!',
-            'status': 'SUCCESS',
-            'timestamp': 'July 23, 2025 - 23:30',
-            'available_endpoints': [
-                'POST /api/auth/login',
-                'POST /api/auth/register', 
-                'GET /api/auth/profile',
-                'GET /api/auth/test'
-            ]
-        }), 200
     
     print("✅ All routes registered")
     print(f"📊 Total routes: {len(app.url_map._rules)}")
     
     return app
 
+def register_blueprints(app):
+    """Register all application blueprints"""
+    print("📋 Registering blueprints...")
+    
+    # Import blueprints
+    from app.routes.auth import auth_bp
+    # from app.routes.admin import admin_bp  # Uncomment when created
+    # from app.routes.user import user_bp    # Uncomment when created
+    # from app.routes.parking import parking_bp  # Uncomment when created
+    
+    # Register blueprints with URL prefixes
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    # app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    # app.register_blueprint(user_bp, url_prefix='/api/user')
+    # app.register_blueprint(parking_bp, url_prefix='/api/parking')
+    
+    print("✅ Blueprints registered")
+
 def init_database(app):
-    """Initialize database with sample data"""
+    """Initialize database with tables and sample data"""
     with app.app_context():
         try:
-            # Import all models
+            # Import all models to ensure they're registered
             from app.models.user import User
             from app.models.parking_lot import ParkingLot
             from app.models.parking_spot import ParkingSpot
@@ -235,15 +134,38 @@ def init_database(app):
                 db.session.add(test_user)
                 print("✅ Test user created!")
             
+            # Create sample parking lot if doesn't exist
+            sample_lot = ParkingLot.query.filter_by(name='Downtown Mall').first()
+            if not sample_lot:
+                sample_lot = ParkingLot(
+                    name='Downtown Mall',
+                    address='123 Main Street, Downtown',
+                    pin_code='500001',
+                    total_spots=50,
+                    price_per_hour=25.0
+                )
+                db.session.add(sample_lot)
+                db.session.commit()
+                
+                # Auto-generate parking spots for the sample lot
+                for i in range(1, sample_lot.total_spots + 1):
+                    spot = ParkingSpot(
+                        lot_id=sample_lot.id,
+                        spot_number=f"A{i:02d}"
+                    )
+                    db.session.add(spot)
+                
+                print("✅ Sample parking lot with spots created!")
+            
             db.session.commit()
+            print("✅ Database initialization complete!")
             
         except Exception as e:
             print(f"⚠️  Database initialization error: {e}")
+            db.session.rollback()
 
 # Create app instance
-print("🚀 Starting app creation...")
 app = create_app()
-print("✅ App created successfully!")
 
 if __name__ == '__main__':
     print("🔄 Initializing Vehicle Parking App...")
@@ -255,7 +177,7 @@ if __name__ == '__main__':
     print("🌐 Admin credentials: admin@parking.com / admin123")
     print("👤 Test user: user@test.com / user123")
     print("📍 Access: http://localhost:5000")
-    print("🧪 Test: http://localhost:5000/api/auth/test")
+    print("🧪 Auth Test: http://localhost:5000/api/auth/test")
     print("🐛 Debug: http://localhost:5000/debug")
     
     app.run(debug=True, host='0.0.0.0', port=5000)
