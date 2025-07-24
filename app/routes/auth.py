@@ -27,7 +27,7 @@ def login():
         if not user.is_active:
             return jsonify({'error': 'Account is inactive'}), 401
         
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
         
         return jsonify({
             'message': 'Login successful',

@@ -27,7 +27,9 @@ def create_app():
     # Initialize extensions with app
     db.init_app(app)
     jwt.init_app(app)
-    CORS(app)
+    CORS(app, resources={r"/api/*": {"origins": "*"}}, 
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+         allow_headers=['Content-Type', 'Authorization'])
     print("✅ Extensions initialized")
     
     # Register blueprints
@@ -39,12 +41,12 @@ def create_app():
         return jsonify({
             'message': 'Vehicle Parking App API',
             'status': 'running',
-            'version': '3.0',
+            'version': '4.0',
             'endpoints': {
                 'health': '/api/health',
                 'auth': '/api/auth/*',
-                'admin': '/api/admin/*',
                 'user': '/api/user/*',
+                'admin': '/api/admin/*',
                 'parking': '/api/parking/*'
             }
         })
@@ -54,13 +56,13 @@ def create_app():
         return jsonify({
             'status': 'healthy', 
             'message': 'Vehicle Parking API is running',
-            'version': '3.0'
+            'version': '4.0'
         })
     
     @app.route('/debug')
     def debug():
         return jsonify({
-            'message': 'DEBUG: Blueprint architecture active!',
+            'message': 'DEBUG: User routes now active!',
             'total_routes': len(app.url_map._rules),
             'registered_blueprints': [bp.name for bp in app.blueprints.values()]
         })
@@ -76,14 +78,14 @@ def register_blueprints(app):
     
     # Import blueprints
     from app.routes.auth import auth_bp
+    from app.routes.user import user_bp
     # from app.routes.admin import admin_bp  # Uncomment when created
-    # from app.routes.user import user_bp    # Uncomment when created
     # from app.routes.parking import parking_bp  # Uncomment when created
     
     # Register blueprints with URL prefixes
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(user_bp, url_prefix='/api/user')
     # app.register_blueprint(admin_bp, url_prefix='/api/admin')
-    # app.register_blueprint(user_bp, url_prefix='/api/user')
     # app.register_blueprint(parking_bp, url_prefix='/api/parking')
     
     print("✅ Blueprints registered")
@@ -134,28 +136,53 @@ def init_database(app):
                 db.session.add(test_user)
                 print("✅ Test user created!")
             
-            # Create sample parking lot if doesn't exist
-            sample_lot = ParkingLot.query.filter_by(name='Downtown Mall').first()
-            if not sample_lot:
-                sample_lot = ParkingLot(
-                    name='Downtown Mall',
-                    address='123 Main Street, Downtown',
-                    pin_code='500001',
-                    total_spots=50,
-                    price_per_hour=25.0
-                )
-                db.session.add(sample_lot)
-                db.session.commit()
-                
-                # Auto-generate parking spots for the sample lot
-                for i in range(1, sample_lot.total_spots + 1):
-                    spot = ParkingSpot(
-                        lot_id=sample_lot.id,
-                        spot_number=f"A{i:02d}"
+            # Create sample parking lots if they don't exist
+            sample_lots = [
+                {
+                    'name': 'Downtown Mall',
+                    'address': '123 Main Street, Downtown',
+                    'pin_code': '500001',
+                    'total_spots': 50,
+                    'price_per_hour': 25.0
+                },
+                {
+                    'name': 'Airport Parking',
+                    'address': '456 Airport Road',
+                    'pin_code': '500037',
+                    'total_spots': 100,
+                    'price_per_hour': 40.0
+                },
+                {
+                    'name': 'Metro Station',
+                    'address': '789 Metro Lane',
+                    'pin_code': '500020',
+                    'total_spots': 30,
+                    'price_per_hour': 15.0
+                }
+            ]
+            
+            for lot_data in sample_lots:
+                existing_lot = ParkingLot.query.filter_by(name=lot_data['name']).first()
+                if not existing_lot:
+                    lot = ParkingLot(
+                        name=lot_data['name'],
+                        address=lot_data['address'],
+                        pin_code=lot_data['pin_code'],
+                        total_spots=lot_data['total_spots'],
+                        price_per_hour=lot_data['price_per_hour']
                     )
-                    db.session.add(spot)
-                
-                print("✅ Sample parking lot with spots created!")
+                    db.session.add(lot)
+                    db.session.commit()
+                    
+                    # Auto-generate parking spots for each lot
+                    for i in range(1, lot.total_spots + 1):
+                        spot = ParkingSpot(
+                            lot_id=lot.id,
+                            spot_number=f"{lot.name[0]}{i:03d}"  # e.g., D001, A001, M001
+                        )
+                        db.session.add(spot)
+                    
+                    print(f"✅ Created {lot_data['name']} with {lot_data['total_spots']} spots!")
             
             db.session.commit()
             print("✅ Database initialization complete!")
@@ -178,6 +205,7 @@ if __name__ == '__main__':
     print("👤 Test user: user@test.com / user123")
     print("📍 Access: http://localhost:5000")
     print("🧪 Auth Test: http://localhost:5000/api/auth/test")
+    print("👤 User Test: http://localhost:5000/api/user/test")
     print("🐛 Debug: http://localhost:5000/debug")
     
     app.run(debug=True, host='0.0.0.0', port=5000)
