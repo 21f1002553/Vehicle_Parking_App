@@ -79,14 +79,12 @@ def register_blueprints(app):
     # Import blueprints
     from app.routes.auth import auth_bp
     from app.routes.user import user_bp
-    # from app.routes.admin import admin_bp  # Uncomment when created
-    # from app.routes.parking import parking_bp  # Uncomment when created
+    from app.routes.admin import admin_bp
     
     # Register blueprints with URL prefixes
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(user_bp, url_prefix='/api/user')
-    # app.register_blueprint(admin_bp, url_prefix='/api/admin')
-    # app.register_blueprint(parking_bp, url_prefix='/api/parking')
+    app.register_blueprint(admin_bp, url_prefix='/api/admin')
     
     print("✅ Blueprints registered")
 
