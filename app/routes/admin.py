@@ -670,6 +670,416 @@ def occupancy_analytics():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ============================================================================
+# MILESTONE 6: ADVANCED CHARTS & ANALYTICS ENDPOINTS
+# ============================================================================
+
+@admin_bp.route('/analytics/charts/dashboard', methods=['GET'])
+@jwt_required()
+def get_dashboard_charts():
+    """Get comprehensive dashboard charts data for Chart.js"""
+    try:
+        admin, error_response, status_code = require_admin()
+        if error_response:
+            return error_response, status_code
+        
+        # Get time period (default: last 30 days)
+        days = request.args.get('days', 30, type=int)
+        start_date = datetime.utcnow() - timedelta(days=days)
+        
+        # Get all completed reservations in the period
+        reservations = Reservation.query.filter(
+            Reservation.status == 'completed',
+            Reservation.parking_end_time >= start_date
+        ).all()
+        
+        # 1. Revenue Over Time Chart (Line Chart)
+        revenue_by_day = {}
+        sessions_by_day = {}
+        for res in reservations:
+            if res.parking_end_time:
+                date_key = res.parking_end_time.strftime('%Y-%m-%d')
+                revenue_by_day[date_key] = revenue_by_day.get(date_key, 0) + (res.total_cost or 0)
+                sessions_by_day[date_key] = sessions_by_day.get(date_key, 0) + 1
+        
+        # Fill missing dates with 0
+        current_date = start_date
+        while current_date <= datetime.utcnow():
+            date_key = current_date.strftime('%Y-%m-%d')
+            if date_key not in revenue_by_day:
+                revenue_by_day[date_key] = 0
+                sessions_by_day[date_key] = 0
+            current_date += timedelta(days=1)
+        
+        # Sort by date and prepare for Chart.js
+        sorted_revenue = sorted(revenue_by_day.items())
+        
+        # 2. Parking Lot Performance (Bar Chart)
+        lot_performance = {}
+        for res in reservations:
+            spot = ParkingSpot.query.get(res.spot_id)
+            if spot:
+                lot = ParkingLot.query.get(spot.lot_id)
+                if lot:
+                    lot_name = lot.name
+                    if lot_name not in lot_performance:
+                        lot_performance[lot_name] = {
+                            'revenue': 0,
+                            'sessions': 0,
+                            'avg_duration': 0,
+                            'total_hours': 0
+                        }
+                    
+                    lot_performance[lot_name]['revenue'] += res.total_cost or 0
+                    lot_performance[lot_name]['sessions'] += 1
+                    
+                    if res.parking_start_time and res.parking_end_time:
+                        duration = res.parking_end_time - res.parking_start_time
+                        hours = duration.total_seconds() / 3600
+                        lot_performance[lot_name]['total_hours'] += hours
+        
+        # Calculate average duration for each lot
+        for lot_name in lot_performance:
+            if lot_performance[lot_name]['sessions'] > 0:
+                lot_performance[lot_name]['avg_duration'] = round(
+                    lot_performance[lot_name]['total_hours'] / lot_performance[lot_name]['sessions'], 2
+                )
+        
+        # 3. Hourly Usage Pattern (Line Chart)
+        hourly_usage = {}
+        for hour in range(24):
+            hourly_usage[hour] = {'sessions': 0, 'revenue': 0}
+        
+        for res in reservations:
+            if res.parking_start_time:
+                hour = res.parking_start_time.hour
+                hourly_usage[hour]['sessions'] += 1
+                hourly_usage[hour]['revenue'] += res.total_cost or 0
+        
+        # 4. User Activity Distribution (Doughnut Chart)
+        user_activity = {}
+        for res in reservations:
+            user = User.query.get(res.user_id)
+            if user:
+                user_key = f"{user.username}"
+                user_activity[user_key] = user_activity.get(user_key, 0) + (res.total_cost or 0)
+        
+        # Get top 5 users and group others
+        sorted_users = sorted(user_activity.items(), key=lambda x: x[1], reverse=True)
+        top_users = sorted_users[:5]
+        others_revenue = sum(revenue for _, revenue in sorted_users[5:])
+        
+        user_chart_data = dict(top_users)
+        if others_revenue > 0:
+            user_chart_data['Others'] = others_revenue
+        
+        # 5. Monthly Comparison (Bar Chart - last 12 months)
+        monthly_data = {}
+        for i in range(12):
+            month_start = datetime.utcnow().replace(day=1) - timedelta(days=30 * i)
+            month_key = month_start.strftime('%Y-%m')
+            monthly_data[month_key] = {'revenue': 0, 'sessions': 0}
+        
+        for res in reservations:
+            if res.parking_end_time:
+                month_key = res.parking_end_time.strftime('%Y-%m')
+                if month_key in monthly_data:
+                    monthly_data[month_key]['revenue'] += res.total_cost or 0
+                    monthly_data[month_key]['sessions'] += 1
+        
+        # 6. Occupancy Trends (Area Chart)
+        occupancy_trends = []
+        for i in range(30):  # Last 30 days
+            date = datetime.utcnow() - timedelta(days=i)
+            day_start = date.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+            
+            daily_sessions = Reservation.query.filter(
+                Reservation.parking_start_time >= day_start,
+                Reservation.parking_start_time < day_end
+            ).count()
+            
+            occupancy_trends.append({
+                'date': day_start.strftime('%Y-%m-%d'),
+                'sessions': daily_sessions,
+                'occupancy_rate': min((daily_sessions / 10) * 100, 100)  # Normalize to percentage
+            })
+        
+        # Prepare Chart.js formatted data
+        charts_data = {
+            'revenue_timeline': {
+                'type': 'line',
+                'title': 'Revenue Over Time',
+                'labels': [date for date, _ in sorted_revenue],
+                'datasets': [
+                    {
+                        'label': 'Daily Revenue (₹)',
+                        'data': [revenue for _, revenue in sorted_revenue],
+                        'borderColor': 'rgb(75, 192, 192)',
+                        'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                        'tension': 0.1
+                    },
+                    {
+                        'label': 'Daily Sessions',
+                        'data': [sessions_by_day[date] for date, _ in sorted_revenue],
+                        'borderColor': 'rgb(255, 99, 132)',
+                        'backgroundColor': 'rgba(255, 99, 132, 0.2)',
+                        'yAxisID': 'y1'
+                    }
+                ]
+            },
+            
+            'lot_performance': {
+                'type': 'bar',
+                'title': 'Parking Lot Performance',
+                'labels': list(lot_performance.keys()),
+                'datasets': [
+                    {
+                        'label': 'Revenue (₹)',
+                        'data': [lot_performance[lot]['revenue'] for lot in lot_performance],
+                        'backgroundColor': 'rgba(54, 162, 235, 0.8)',
+                        'borderColor': 'rgb(54, 162, 235)',
+                        'borderWidth': 1
+                    },
+                    {
+                        'label': 'Sessions',
+                        'data': [lot_performance[lot]['sessions'] for lot in lot_performance],
+                        'backgroundColor': 'rgba(255, 206, 86, 0.8)',
+                        'borderColor': 'rgb(255, 206, 86)',
+                        'borderWidth': 1,
+                        'yAxisID': 'y1'
+                    }
+                ]
+            },
+            
+            'hourly_pattern': {
+                'type': 'line',
+                'title': 'Hourly Usage Pattern',
+                'labels': [f"{hour:02d}:00" for hour in range(24)],
+                'datasets': [
+                    {
+                        'label': 'Sessions per Hour',
+                        'data': [hourly_usage[hour]['sessions'] for hour in range(24)],
+                        'borderColor': 'rgb(153, 102, 255)',
+                        'backgroundColor': 'rgba(153, 102, 255, 0.2)',
+                        'fill': True
+                    }
+                ]
+            },
+            
+            'user_distribution': {
+                'type': 'doughnut',
+                'title': 'Revenue by User',
+                'labels': list(user_chart_data.keys()),
+                'datasets': [
+                    {
+                        'label': 'Revenue (₹)',
+                        'data': list(user_chart_data.values()),
+                        'backgroundColor': [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                            '#9966FF', '#FF9F40', '#FF6384', '#36A2EB'
+                        ],
+                        'borderWidth': 2
+                    }
+                ]
+            },
+            
+            'monthly_comparison': {
+                'type': 'bar',
+                'title': 'Monthly Comparison (Last 12 Months)',
+                'labels': sorted(monthly_data.keys()),
+                'datasets': [
+                    {
+                        'label': 'Monthly Revenue (₹)',
+                        'data': [monthly_data[month]['revenue'] for month in sorted(monthly_data.keys())],
+                        'backgroundColor': 'rgba(75, 192, 192, 0.8)',
+                        'borderColor': 'rgb(75, 192, 192)',
+                        'borderWidth': 1
+                    }
+                ]
+            },
+            
+            'occupancy_trends': {
+                'type': 'area',
+                'title': 'Occupancy Trends (Last 30 Days)',
+                'labels': [item['date'] for item in reversed(occupancy_trends)],
+                'datasets': [
+                    {
+                        'label': 'Daily Sessions',
+                        'data': [item['sessions'] for item in reversed(occupancy_trends)],
+                        'borderColor': 'rgb(255, 99, 132)',
+                        'backgroundColor': 'rgba(255, 99, 132, 0.3)',
+                        'fill': True
+                    }
+                ]
+            }
+        }
+        
+        # Summary statistics for dashboard cards
+        total_revenue = sum(res.total_cost for res in reservations if res.total_cost)
+        total_sessions = len(reservations)
+        avg_session_value = round(total_revenue / total_sessions, 2) if total_sessions > 0 else 0
+        
+        # Peak hour
+        peak_hour = max(hourly_usage, key=lambda x: hourly_usage[x]['sessions'])
+        
+        # Most profitable lot
+        most_profitable_lot = max(lot_performance, key=lambda x: lot_performance[x]['revenue']) if lot_performance else None
+        
+        summary_stats = {
+            'total_revenue': total_revenue,
+            'total_sessions': total_sessions,
+            'avg_session_value': avg_session_value,
+            'peak_hour': f"{peak_hour:02d}:00",
+            'peak_hour_sessions': hourly_usage[peak_hour]['sessions'],
+            'most_profitable_lot': most_profitable_lot,
+            'most_profitable_lot_revenue': lot_performance[most_profitable_lot]['revenue'] if most_profitable_lot else 0,
+            'period_days': days
+        }
+        
+        return jsonify({
+            'charts': charts_data,
+            'summary': summary_stats,
+            'period': f'Last {days} days',
+            'generated_at': datetime.utcnow().isoformat()
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/analytics/charts/revenue-breakdown', methods=['GET'])
+@jwt_required()
+def get_revenue_breakdown_charts():
+    """Get detailed revenue breakdown charts"""
+    try:
+        admin, error_response, status_code = require_admin()
+        if error_response:
+            return error_response, status_code
+        
+        # Get time period
+        days = request.args.get('days', 30, type=int)
+        start_date = datetime.utcnow() - timedelta(days=days)
+        
+        reservations = Reservation.query.filter(
+            Reservation.status == 'completed',
+            Reservation.parking_end_time >= start_date
+        ).all()
+        
+        # Revenue by day of week
+        weekday_revenue = {i: 0 for i in range(7)}  # 0=Monday, 6=Sunday
+        for res in reservations:
+            if res.parking_end_time:
+                weekday = res.parking_end_time.weekday()
+                weekday_revenue[weekday] += res.total_cost or 0
+        
+        weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        
+        # Revenue by parking duration
+        duration_brackets = {
+            '0-1 hours': 0, '1-2 hours': 0, '2-4 hours': 0, 
+            '4-8 hours': 0, '8+ hours': 0
+        }
+        
+        for res in reservations:
+            if res.parking_start_time and res.parking_end_time:
+                duration = res.parking_end_time - res.parking_start_time
+                hours = duration.total_seconds() / 3600
+                
+                if hours <= 1:
+                    duration_brackets['0-1 hours'] += res.total_cost or 0
+                elif hours <= 2:
+                    duration_brackets['1-2 hours'] += res.total_cost or 0
+                elif hours <= 4:
+                    duration_brackets['2-4 hours'] += res.total_cost or 0
+                elif hours <= 8:
+                    duration_brackets['4-8 hours'] += res.total_cost or 0
+                else:
+                    duration_brackets['8+ hours'] += res.total_cost or 0
+        
+        # Average revenue per hour by lot
+        lot_hourly_revenue = {}
+        for res in reservations:
+            spot = ParkingSpot.query.get(res.spot_id)
+            if spot:
+                lot = ParkingLot.query.get(spot.lot_id)
+                if lot:
+                    if lot.name not in lot_hourly_revenue:
+                        lot_hourly_revenue[lot.name] = {'total_revenue': 0, 'total_hours': 0}
+                    
+                    lot_hourly_revenue[lot.name]['total_revenue'] += res.total_cost or 0
+                    
+                    if res.parking_start_time and res.parking_end_time:
+                        duration = res.parking_end_time - res.parking_start_time
+                        hours = max(duration.total_seconds() / 3600, 1)  # Minimum 1 hour
+                        lot_hourly_revenue[lot.name]['total_hours'] += hours
+        
+        # Calculate average hourly rates
+        for lot_name in lot_hourly_revenue:
+            if lot_hourly_revenue[lot_name]['total_hours'] > 0:
+                avg_rate = lot_hourly_revenue[lot_name]['total_revenue'] / lot_hourly_revenue[lot_name]['total_hours']
+                lot_hourly_revenue[lot_name]['avg_hourly_rate'] = round(avg_rate, 2)
+            else:
+                lot_hourly_revenue[lot_name]['avg_hourly_rate'] = 0
+        
+        charts_data = {
+            'weekday_revenue': {
+                'type': 'polarArea',
+                'title': 'Revenue by Day of Week',
+                'labels': weekday_names,
+                'datasets': [
+                    {
+                        'label': 'Revenue (₹)',
+                        'data': [weekday_revenue[i] for i in range(7)],
+                        'backgroundColor': [
+                            'rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 206, 86, 0.8)', 'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)',
+                            'rgba(199, 199, 199, 0.8)'
+                        ]
+                    }
+                ]
+            },
+            
+            'duration_revenue': {
+                'type': 'pie',
+                'title': 'Revenue by Parking Duration',
+                'labels': list(duration_brackets.keys()),
+                'datasets': [
+                    {
+                        'label': 'Revenue (₹)',
+                        'data': list(duration_brackets.values()),
+                        'backgroundColor': [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                        ]
+                    }
+                ]
+            },
+            
+            'lot_efficiency': {
+                'type': 'radar',
+                'title': 'Average Hourly Revenue by Lot',
+                'labels': list(lot_hourly_revenue.keys()),
+                'datasets': [
+                    {
+                        'label': 'Avg Hourly Rate (₹)',
+                        'data': [lot_hourly_revenue[lot]['avg_hourly_rate'] for lot in lot_hourly_revenue],
+                        'borderColor': 'rgb(255, 99, 132)',
+                        'backgroundColor': 'rgba(255, 99, 132, 0.2)',
+                        'pointBackgroundColor': 'rgb(255, 99, 132)',
+                        'pointBorderColor': '#fff'
+                    }
+                ]
+            }
+        }
+        
+        return jsonify({
+            'charts': charts_data,
+            'period': f'Last {days} days'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @admin_bp.route('/spots/<int:spot_id>/force-release', methods=['POST'])
 @jwt_required()
 def force_release_spot(spot_id):
@@ -728,6 +1138,8 @@ def test_admin_routes():
             'GET /api/admin/reservations/detailed',
             'GET /api/admin/analytics/revenue',
             'GET /api/admin/analytics/occupancy',
+            'GET /api/admin/analytics/charts/dashboard',
+            'GET /api/admin/analytics/charts/revenue-breakdown',
             'POST /api/admin/spots/<id>/force-release',
             'GET /api/admin/test'
         ]
@@ -736,18 +1148,34 @@ def test_admin_routes():
 # Helper functions for admin analytics
 def calculate_admin_cost_breakdown(reservation):
     """Calculate detailed cost breakdown for admin view"""
-    from app.routes.user import calculate_cost_breakdown  # Import to avoid circular import
+    if not reservation.parking_start_time or not reservation.parking_end_time:
+        return {
+            'base_cost': 0,
+            'duration_hours': 0,
+            'hourly_rate': reservation.hourly_rate,
+            'total_cost': 0,
+            'breakdown_text': "Parking session not completed"
+        }
     
-    breakdown = calculate_cost_breakdown(reservation)  # Use existing function
+    duration = reservation.parking_end_time - reservation.parking_start_time
+    hours = duration.total_seconds() / 3600
+    billable_hours = max(hours, 1.0)
     
-    # Add admin-specific details
-    if reservation.parking_start_time and reservation.parking_end_time:
-        breakdown['admin_notes'] = {
+    breakdown = {
+        'actual_duration_hours': round(hours, 2),
+        'billable_hours': round(billable_hours, 2),
+        'hourly_rate': reservation.hourly_rate,
+        'base_cost': round(billable_hours * reservation.hourly_rate, 2),
+        'total_cost': reservation.total_cost,
+        'minimum_charge_applied': hours < 1.0,
+        'breakdown_text': f"{billable_hours:.2f} hours × ₹{reservation.hourly_rate}/hour = ₹{reservation.total_cost}",
+        'admin_notes': {
             'reservation_created': reservation.reservation_time.isoformat() if reservation.reservation_time else None,
             'parking_started': reservation.parking_start_time.isoformat(),
             'parking_ended': reservation.parking_end_time.isoformat(),
             'time_between_reserve_and_start': str(reservation.parking_start_time - reservation.reservation_time) if reservation.reservation_time else None
         }
+    }
     
     return breakdown
 

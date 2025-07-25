@@ -488,6 +488,423 @@ def get_active_reservation():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ============================================================================
+# MILESTONE 6: USER CHARTS & ANALYTICS ENDPOINTS
+# ============================================================================
+
+@user_bp.route('/analytics/charts/personal', methods=['GET'])
+@jwt_required()
+def get_personal_charts():
+    """Get personal parking analytics charts for user dashboard"""
+    try:
+        user, error_response, status_code = require_user()
+        if error_response:
+            return error_response, status_code
+        
+        # Get time period (default: last 90 days)
+        days = request.args.get('days', 90, type=int)
+        start_date = datetime.utcnow() - timedelta(days=days)
+        
+        # Get user's completed reservations in the period
+        reservations = Reservation.query.filter(
+            Reservation.user_id == user.id,
+            Reservation.status == 'completed',
+            Reservation.parking_end_time >= start_date
+        ).all()
+        
+        # 1. Personal Spending Over Time (Line Chart)
+        spending_by_day = {}
+        sessions_by_day = {}
+        for res in reservations:
+            if res.parking_end_time:
+                date_key = res.parking_end_time.strftime('%Y-%m-%d')
+                spending_by_day[date_key] = spending_by_day.get(date_key, 0) + (res.total_cost or 0)
+                sessions_by_day[date_key] = sessions_by_day.get(date_key, 0) + 1
+        
+        # Fill missing dates with 0
+        current_date = start_date
+        while current_date <= datetime.utcnow():
+            date_key = current_date.strftime('%Y-%m-%d')
+            if date_key not in spending_by_day:
+                spending_by_day[date_key] = 0
+                sessions_by_day[date_key] = 0
+            current_date += timedelta(days=1)
+        
+        # Sort by date and prepare for Chart.js
+        sorted_spending = sorted(spending_by_day.items())
+        
+        # 2. Parking Lot Usage (Doughnut Chart)
+        lot_usage = {}
+        lot_spending = {}
+        for res in reservations:
+            spot = ParkingSpot.query.get(res.spot_id)
+            if spot:
+                lot = ParkingLot.query.get(spot.lot_id)
+                if lot:
+                    lot_name = lot.name
+                    lot_usage[lot_name] = lot_usage.get(lot_name, 0) + 1
+                    lot_spending[lot_name] = lot_spending.get(lot_name, 0) + (res.total_cost or 0)
+        
+        # 3. Parking Duration Distribution (Bar Chart)
+        duration_brackets = {
+            '0-1 hours': 0, '1-2 hours': 0, '2-4 hours': 0, 
+            '4-8 hours': 0, '8+ hours': 0
+        }
+        
+        for res in reservations:
+            if res.parking_start_time and res.parking_end_time:
+                duration = res.parking_end_time - res.parking_start_time
+                hours = duration.total_seconds() / 3600
+                
+                if hours <= 1:
+                    duration_brackets['0-1 hours'] += 1
+                elif hours <= 2:
+                    duration_brackets['1-2 hours'] += 1
+                elif hours <= 4:
+                    duration_brackets['2-4 hours'] += 1
+                elif hours <= 8:
+                    duration_brackets['4-8 hours'] += 1
+                else:
+                    duration_brackets['8+ hours'] += 1
+        
+        # 4. Weekly Pattern (Radar Chart)
+        weekday_usage = {i: 0 for i in range(7)}  # 0=Monday, 6=Sunday
+        weekday_spending = {i: 0 for i in range(7)}
+        
+        for res in reservations:
+            if res.parking_start_time:
+                weekday = res.parking_start_time.weekday()
+                weekday_usage[weekday] += 1
+                weekday_spending[weekday] += res.total_cost or 0
+        
+        weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        
+        # 5. Monthly Spending Trend (Area Chart)
+        monthly_spending = {}
+        for i in range(6):  # Last 6 months
+            month_start = datetime.utcnow().replace(day=1) - timedelta(days=30 * i)
+            month_key = month_start.strftime('%Y-%m')
+            monthly_spending[month_key] = 0
+        
+        for res in reservations:
+            if res.parking_end_time:
+                month_key = res.parking_end_time.strftime('%Y-%m')
+                if month_key in monthly_spending:
+                    monthly_spending[month_key] += res.total_cost or 0
+        
+        # 6. Hourly Usage Pattern
+        hourly_usage = {}
+        for hour in range(24):
+            hourly_usage[hour] = 0
+        
+        for res in reservations:
+            if res.parking_start_time:
+                hour = res.parking_start_time.hour
+                hourly_usage[hour] += 1
+        
+        # Prepare Chart.js formatted data
+        charts_data = {
+            'spending_timeline': {
+                'type': 'line',
+                'title': 'My Parking Spending Over Time',
+                'labels': [date for date, _ in sorted_spending],
+                'datasets': [
+                    {
+                        'label': 'Daily Spending (₹)',
+                        'data': [spending for _, spending in sorted_spending],
+                        'borderColor': 'rgb(75, 192, 192)',
+                        'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                        'tension': 0.1,
+                        'fill': True
+                    }
+                ]
+            },
+            
+            'lot_usage': {
+                'type': 'doughnut',
+                'title': 'My Parking Lot Usage',
+                'labels': list(lot_usage.keys()),
+                'datasets': [
+                    {
+                        'label': 'Sessions',
+                        'data': list(lot_usage.values()),
+                        'backgroundColor': [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                            '#9966FF', '#FF9F40', '#FF6384', '#36A2EB'
+                        ],
+                        'borderWidth': 2
+                    }
+                ]
+            },
+            
+            'duration_distribution': {
+                'type': 'bar',
+                'title': 'My Parking Duration Patterns',
+                'labels': list(duration_brackets.keys()),
+                'datasets': [
+                    {
+                        'label': 'Number of Sessions',
+                        'data': list(duration_brackets.values()),
+                        'backgroundColor': 'rgba(54, 162, 235, 0.8)',
+                        'borderColor': 'rgb(54, 162, 235)',
+                        'borderWidth': 1
+                    }
+                ]
+            },
+            
+            'weekly_pattern': {
+                'type': 'radar',
+                'title': 'My Weekly Parking Pattern',
+                'labels': weekday_names,
+                'datasets': [
+                    {
+                        'label': 'Sessions per Day',
+                        'data': [weekday_usage[i] for i in range(7)],
+                        'borderColor': 'rgb(255, 99, 132)',
+                        'backgroundColor': 'rgba(255, 99, 132, 0.2)',
+                        'pointBackgroundColor': 'rgb(255, 99, 132)',
+                        'pointBorderColor': '#fff'
+                    }
+                ]
+            },
+            
+            'monthly_trend': {
+                'type': 'line',
+                'title': 'Monthly Spending Trend',
+                'labels': sorted(monthly_spending.keys()),
+                'datasets': [
+                    {
+                        'label': 'Monthly Spending (₹)',
+                        'data': [monthly_spending[month] for month in sorted(monthly_spending.keys())],
+                        'borderColor': 'rgb(153, 102, 255)',
+                        'backgroundColor': 'rgba(153, 102, 255, 0.3)',
+                        'fill': True,
+                        'tension': 0.4
+                    }
+                ]
+            },
+            
+            'hourly_pattern': {
+                'type': 'bar',
+                'title': 'My Parking Hours Preference',
+                'labels': [f"{hour:02d}:00" for hour in range(24)],
+                'datasets': [
+                    {
+                        'label': 'Sessions Started',
+                        'data': [hourly_usage[hour] for hour in range(24)],
+                        'backgroundColor': 'rgba(255, 206, 86, 0.8)',
+                        'borderColor': 'rgb(255, 206, 86)',
+                        'borderWidth': 1
+                    }
+                ]
+            }
+        }
+        
+        # Personal summary statistics
+        total_spent = sum(res.total_cost for res in reservations if res.total_cost)
+        total_sessions = len(reservations)
+        avg_session_cost = round(total_spent / total_sessions, 2) if total_sessions > 0 else 0
+        
+        # Calculate total hours parked
+        total_hours = 0
+        for res in reservations:
+            if res.parking_start_time and res.parking_end_time:
+                duration = res.parking_end_time - res.parking_start_time
+                total_hours += duration.total_seconds() / 3600
+        
+        # Most used lot
+        most_used_lot = max(lot_usage, key=lot_usage.get) if lot_usage else None
+        
+        # Peak parking hour
+        peak_hour = max(hourly_usage, key=hourly_usage.get) if any(hourly_usage.values()) else None
+        
+        # Favorite day
+        favorite_day = max(weekday_usage, key=weekday_usage.get) if any(weekday_usage.values()) else None
+        favorite_day_name = weekday_names[favorite_day] if favorite_day is not None else None
+        
+        summary_stats = {
+            'total_spent': total_spent,
+            'total_sessions': total_sessions,
+            'avg_session_cost': avg_session_cost,
+            'total_hours_parked': round(total_hours, 1),
+            'avg_session_duration': round(total_hours / total_sessions, 1) if total_sessions > 0 else 0,
+            'most_used_lot': most_used_lot,
+            'most_used_lot_sessions': lot_usage[most_used_lot] if most_used_lot else 0,
+            'peak_parking_hour': f"{peak_hour:02d}:00" if peak_hour is not None else None,
+            'favorite_day': favorite_day_name,
+            'period_days': days
+        }
+        
+        return jsonify({
+            'charts': charts_data,
+            'summary': summary_stats,
+            'period': f'Last {days} days',
+            'generated_at': datetime.utcnow().isoformat()
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@user_bp.route('/analytics/charts/cost-analysis', methods=['GET'])
+@jwt_required()
+def get_cost_analysis_charts():
+    """Get detailed cost analysis charts for user"""
+    try:
+        user, error_response, status_code = require_user()
+        if error_response:
+            return error_response, status_code
+        
+        # Get time period
+        days = request.args.get('days', 90, type=int)
+        start_date = datetime.utcnow() - timedelta(days=days)
+        
+        reservations = Reservation.query.filter(
+            Reservation.user_id == user.id,
+            Reservation.status == 'completed',
+            Reservation.parking_end_time >= start_date
+        ).all()
+        
+        # 1. Cost vs Duration Scatter Plot
+        cost_duration_data = []
+        for res in reservations:
+            if res.parking_start_time and res.parking_end_time and res.total_cost:
+                duration = res.parking_end_time - res.parking_start_time
+                hours = duration.total_seconds() / 3600
+                cost_duration_data.append({
+                    'x': round(hours, 2),
+                    'y': res.total_cost
+                })
+        
+        # 2. Cost by Time of Day
+        time_cost = {}
+        for hour in range(24):
+            time_cost[hour] = {'total_cost': 0, 'sessions': 0}
+        
+        for res in reservations:
+            if res.parking_start_time and res.total_cost:
+                hour = res.parking_start_time.hour
+                time_cost[hour]['total_cost'] += res.total_cost
+                time_cost[hour]['sessions'] += 1
+        
+        # Calculate average cost per hour
+        avg_cost_by_hour = {}
+        for hour in range(24):
+            if time_cost[hour]['sessions'] > 0:
+                avg_cost_by_hour[hour] = round(time_cost[hour]['total_cost'] / time_cost[hour]['sessions'], 2)
+            else:
+                avg_cost_by_hour[hour] = 0
+        
+        # 3. Efficiency Analysis (Cost per hour for each lot)
+        lot_efficiency = {}
+        for res in reservations:
+            spot = ParkingSpot.query.get(res.spot_id)
+            if spot and res.parking_start_time and res.parking_end_time:
+                lot = ParkingLot.query.get(spot.lot_id)
+                if lot:
+                    lot_name = lot.name
+                    if lot_name not in lot_efficiency:
+                        lot_efficiency[lot_name] = {'total_cost': 0, 'total_hours': 0}
+                    
+                    duration = res.parking_end_time - res.parking_start_time
+                    hours = max(duration.total_seconds() / 3600, 1)  # Minimum 1 hour
+                    
+                    lot_efficiency[lot_name]['total_cost'] += res.total_cost or 0
+                    lot_efficiency[lot_name]['total_hours'] += hours
+        
+        # Calculate cost per hour for each lot
+        for lot_name in lot_efficiency:
+            if lot_efficiency[lot_name]['total_hours'] > 0:
+                cost_per_hour = lot_efficiency[lot_name]['total_cost'] / lot_efficiency[lot_name]['total_hours']
+                lot_efficiency[lot_name]['cost_per_hour'] = round(cost_per_hour, 2)
+            else:
+                lot_efficiency[lot_name]['cost_per_hour'] = 0
+        
+        # 4. Weekly Cost Comparison
+        weekly_costs = {}
+        for i in range(4):  # Last 4 weeks
+            week_start = datetime.utcnow() - timedelta(weeks=i+1)
+            week_end = week_start + timedelta(days=7)
+            week_key = f"Week {i+1}"
+            weekly_costs[week_key] = 0
+            
+            for res in reservations:
+                if res.parking_end_time and week_start <= res.parking_end_time <= week_end:
+                    weekly_costs[week_key] += res.total_cost or 0
+        
+        charts_data = {
+            'cost_vs_duration': {
+                'type': 'scatter',
+                'title': 'Cost vs Duration Analysis',
+                'datasets': [
+                    {
+                        'label': 'Cost vs Hours',
+                        'data': cost_duration_data,
+                        'backgroundColor': 'rgba(255, 99, 132, 0.6)',
+                        'borderColor': 'rgb(255, 99, 132)',
+                        'pointRadius': 5
+                    }
+                ]
+            },
+            
+            'cost_by_time': {
+                'type': 'line',
+                'title': 'Average Cost by Time of Day',
+                'labels': [f"{hour:02d}:00" for hour in range(24)],
+                'datasets': [
+                    {
+                        'label': 'Avg Cost per Session (₹)',
+                        'data': [avg_cost_by_hour[hour] for hour in range(24)],
+                        'borderColor': 'rgb(54, 162, 235)',
+                        'backgroundColor': 'rgba(54, 162, 235, 0.2)',
+                        'fill': True,
+                        'tension': 0.4
+                    }
+                ]
+            },
+            
+            'lot_efficiency': {
+                'type': 'horizontalBar',
+                'title': 'Cost Efficiency by Parking Lot',
+                'labels': list(lot_efficiency.keys()),
+                'datasets': [
+                    {
+                        'label': 'Cost per Hour (₹)',
+                        'data': [lot_efficiency[lot]['cost_per_hour'] for lot in lot_efficiency],
+                        'backgroundColor': 'rgba(75, 192, 192, 0.8)',
+                        'borderColor': 'rgb(75, 192, 192)',
+                        'borderWidth': 1
+                    }
+                ]
+            },
+            
+            'weekly_comparison': {
+                'type': 'bar',
+                'title': 'Weekly Spending Comparison',
+                'labels': list(reversed(list(weekly_costs.keys()))),
+                'datasets': [
+                    {
+                        'label': 'Weekly Spending (₹)',
+                        'data': list(reversed(list(weekly_costs.values()))),
+                        'backgroundColor': [
+                            'rgba(255, 206, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)', 
+                            'rgba(153, 102, 255, 0.8)',
+                            'rgba(255, 159, 64, 0.8)'
+                        ],
+                        'borderWidth': 1
+                    }
+                ]
+            }
+        }
+        
+        return jsonify({
+            'charts': charts_data,
+            'period': f'Last {days} days'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @user_bp.route('/test', methods=['GET'])
 def test_user_routes():
     """Test endpoint to verify user routes are working"""
@@ -503,6 +920,8 @@ def test_user_routes():
             'GET /api/user/parking-history/detailed',
             'GET /api/user/cost-summary',
             'GET /api/user/active-reservation',
+            'GET /api/user/analytics/charts/personal',
+            'GET /api/user/analytics/charts/cost-analysis',
             'GET /api/user/test'
         ]
     }), 200
