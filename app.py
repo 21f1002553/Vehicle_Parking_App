@@ -134,30 +134,45 @@ def init_database(app):
                 db.session.add(test_user)
                 print("✅ Test user created!")
             
-            # Create sample parking lots if they don't exist
             sample_lots = [
-                {
-                    'name': 'Downtown Mall',
-                    'address': '123 Main Street, Downtown',
-                    'pin_code': '500001',
-                    'total_spots': 50,
-                    'price_per_hour': 25.0
-                },
-                {
-                    'name': 'Airport Parking',
-                    'address': '456 Airport Road',
-                    'pin_code': '500037',
-                    'total_spots': 100,
-                    'price_per_hour': 40.0
-                },
-                {
-                    'name': 'Metro Station',
-                    'address': '789 Metro Lane',
-                    'pin_code': '500020',
-                    'total_spots': 30,
-                    'price_per_hour': 15.0
-                }
-            ]
+            {
+                'name': 'Downtown Mall',
+                'address': 'Forum Mall, Koramangala, Bangalore',
+                'pin_code': '560034',
+                'total_spots': 50,
+                'price_per_hour': 50.0    # ₹50/hour (typical mall parking)
+            },
+            {
+                'name': 'Airport Parking',
+                'address': 'Kempegowda International Airport, Bangalore',
+                'pin_code': '560300',
+                'total_spots': 100,
+                'price_per_hour': 100.0   # ₹100/hour (airport premium)
+            },
+            {
+                'name': 'Metro Station',
+                'address': 'MG Road Metro Station, Bangalore',
+                'pin_code': '560001',
+                'total_spots': 30,
+                'price_per_hour': 20.0    # ₹20/hour (government metro parking)
+            },
+            {
+                'name': 'IT Park',
+                'address': 'Electronic City, Bangalore',
+                'pin_code': '560100',
+                'total_spots': 200,
+                'price_per_hour': 30.0    # ₹30/hour (office complex)
+            },
+            {
+                'name': 'Commercial Street',
+                'address': 'Commercial Street, Brigade Road, Bangalore',
+                'pin_code': '560001',
+                'total_spots': 25,
+                'price_per_hour': 40.0    # ₹40/hour (premium shopping area)
+            }
+        ]
+            
+            
             
             for lot_data in sample_lots:
                 existing_lot = ParkingLot.query.filter_by(name=lot_data['name']).first()

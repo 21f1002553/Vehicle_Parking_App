@@ -88,7 +88,7 @@ if dashboard_data:
     print(f"🚗 Total Spots: {stats.get('total_parking_spots', 0)}")
     print(f"🔴 Occupied: {stats.get('occupied_spots', 0)}")
     print(f"🟢 Available: {stats.get('available_spots', 0)}")
-    print(f"💰 Total Revenue: ${stats.get('total_revenue', 0)}")
+    print(f"💰 Total Revenue: ₨{stats.get('total_revenue', 0)}")
 
 # ============================================================================
 # 4. PARKING LOT MANAGEMENT

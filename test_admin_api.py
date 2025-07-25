@@ -33,7 +33,7 @@ try:
         print(f"   📊 Total Users: {stats.get('total_users', 0)}")
         print(f"   🅿️  Parking Lots: {stats.get('total_parking_lots', 0)}")
         print(f"   🚗 Total Spots: {stats.get('total_parking_spots', 0)}")
-        print(f"   💰 Revenue: ${stats.get('total_revenue', 0)}")
+        print(f"   💰 Revenue: ₨{stats.get('total_revenue', 0)}")
     else:
         print(f"❌ Dashboard failed: {response.json()}")
 except Exception as e:

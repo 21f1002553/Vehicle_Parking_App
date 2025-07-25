@@ -155,7 +155,7 @@ if user_token:
                                               headers=user_headers)
             
             if release_data and status == 200:
-                print(f"💰 Total Cost: ${release_data.get('total_cost', 0)}")
+                print(f"💰 Total Cost: ₨{release_data.get('total_cost', 0)}")
                 print(f"⏱️  Duration: {release_data.get('duration_hours', 0)} hours")
     
     print("\n4.5 Testing Parking History")
@@ -164,7 +164,7 @@ if user_token:
     if history_data and status == 200:
         stats = history_data.get('statistics', {})
         print(f"📊 Total Sessions: {stats.get('total_sessions', 0)}")
-        print(f"💰 Total Spent: ${stats.get('total_cost', 0)}")
+        print(f"💰 Total Spent: ₨{stats.get('total_cost', 0)}")
         print(f"✅ Completed Sessions: {stats.get('completed_sessions', 0)}")
 
 else:

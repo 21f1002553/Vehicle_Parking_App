@@ -45,7 +45,7 @@ if response.status_code == 201:
         if response.status_code == 200:
             result = response.json()
             print("✅ Spot released successfully!")
-            print(f"💰 Total Cost: ${result['total_cost']}")
+            print(f"💰 Total Cost: ₨{result['total_cost']}")
             print(f"⏱️  Duration: {result.get('duration_hours', 0)} hours")
         else:
             print(f"❌ Release failed: {response.json()}")
@@ -61,7 +61,7 @@ print(f"Status: {response.status_code}")
 if response.status_code == 200:
     history = response.json()
     print(f"✅ Total sessions: {history['statistics']['total_sessions']}")
-    print(f"💰 Total spent: ${history['statistics']['total_cost']}")
+    print(f"💰 Total spent: ₨{history['statistics']['total_cost']}")
 else:
     print(f"❌ History failed: {response.json()}")
 
