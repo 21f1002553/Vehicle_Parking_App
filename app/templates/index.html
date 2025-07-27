@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vehicle Parking System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+        }
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 3rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .btn {
+            background: #2c5aa0;
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.5rem;
+        }
+        .btn:hover {
+            background: #1e3d6f;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <i class="fas fa-car" style="font-size: 4rem; margin-bottom: 1rem;"></i>
+        <h1>🚗 Vehicle Parking System</h1>
+        <p>Welcome to the Smart Parking Management System</p>
+        <div>
+            <a href="/api/health" class="btn">✅ Test API Health</a>
+            <a href="/debug" class="btn">🐛 Debug Info</a>
+        </div>
+        <div style="margin-top: 2rem;">
+            <p><strong>Frontend is working!</strong> ✅</p>
+            <small>Next: Create Vue.js components for full functionality</small>
+        </div>
+    </div>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</body>
+</html>
