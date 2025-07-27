@@ -1,57 +1,88 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vehicle Parking System</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-        }
-        .container {
-            text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 3rem;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-        }
-        .btn {
-            background: #2c5aa0;
-            color: white;
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            margin: 0.5rem;
-        }
-        .btn:hover {
-            background: #1e3d6f;
-            transform: translateY(-2px);
-        }
-    </style>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
 <body>
-    <div class="container">
-        <i class="fas fa-car" style="font-size: 4rem; margin-bottom: 1rem;"></i>
-        <h1>🚗 Vehicle Parking System</h1>
-        <p>Welcome to the Smart Parking Management System</p>
-        <div>
-            <a href="/api/health" class="btn">✅ Test API Health</a>
-            <a href="/debug" class="btn">🐛 Debug Info</a>
-        </div>
-        <div style="margin-top: 2rem;">
-            <p><strong>Frontend is working!</strong> ✅</p>
-            <small>Next: Create Vue.js components for full functionality</small>
+    <div id="app">
+        <!-- Loading Screen -->
+        <div class="d-flex justify-content-center align-items-center" style="height: 100vh;">
+            <div class="text-center">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5 class="text-muted">
+                    <i class="fas fa-car me-2"></i>Vehicle Parking System
+                </h5>
+                <p class="small text-muted">Initializing application...</p>
+            </div>
         </div>
     </div>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Vue.js 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <!-- Vue Router -->
+    <script src="https://unpkg.com/vue-router@4/dist/vue-router.global.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- API Configuration -->
+    <script>
+        window.APP_CONFIG = {
+            API_BASE_URL: '{{ request.url_root }}api',
+            APP_NAME: 'Vehicle Parking System',
+            VERSION: '4.0'
+        };
+        console.log('🔧 App Config loaded:', window.APP_CONFIG);
+    </script>
+    
+    <!-- Core Application JS (only load if files exist) -->
+    <script>
+        // Simple error handling for missing files
+        function loadScript(src) {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onerror = () => console.warn('Could not load:', src);
+            document.head.appendChild(script);
+        }
+        
+        // Load core JS files
+        loadScript('{{ url_for("static", filename="js/utils.js") }}');
+        loadScript('{{ url_for("static", filename="js/api.js") }}');
+        loadScript('{{ url_for("static", filename="js/auth.js") }}');
+        
+        // Load Vue components
+        loadScript('{{ url_for("static", filename="components/shared/ErrorMessage.vue.js") }}');
+        loadScript('{{ url_for("static", filename="components/shared/LoadingSpinner.vue.js") }}');
+        loadScript('{{ url_for("static", filename="components/layout/AuthLayout.vue.js") }}');
+        loadScript('{{ url_for("static", filename="components/auth/Login.vue.js") }}');
+        loadScript('{{ url_for("static", filename="components/auth/Register.vue.js") }}');
+        
+        // Load main app last
+        setTimeout(() => {
+            loadScript('{{ url_for("static", filename="js/main.js") }}');
+        }, 500);
+    </script>
+    
+    <script>
+        console.log('🚀 Basic Vehicle Parking System template loaded');
+        console.log('📁 Template loaded from:', '{{ request.endpoint }}');
+    </script>
 </body>
 </html>

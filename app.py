@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from datetime import timedelta
@@ -15,7 +15,11 @@ jwt = JWTManager()
 def create_app():
     """Application factory pattern"""
     print("🔧 Creating Flask app...")
-    app = Flask(__name__)
+    
+    # Explicitly set template and static folders relative to app.py location
+    app = Flask(__name__, 
+                template_folder='app/templates',
+                static_folder='app/static')
     
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-this')
@@ -40,6 +44,10 @@ def create_app():
     
     print("✅ All routes registered")
     print(f"📊 Total routes: {len(app.url_map._rules)}")
+    
+    # Debug: Print folder paths to confirm they're correct
+    print(f"📁 Template folder: {app.template_folder}")
+    print(f"📁 Static folder: {app.static_folder}")
     
     return app
 
@@ -105,6 +113,8 @@ def register_frontend_routes(app):
             'message': 'DEBUG: Vehicle Parking App with Frontend!',
             'total_routes': len(app.url_map._rules),
             'registered_blueprints': [bp.name for bp in app.blueprints.values()],
+            'template_folder': app.template_folder,
+            'static_folder': app.static_folder,
             'api_endpoints': {
                 'health': '/api/health',
                 'auth': '/api/auth/*',
@@ -339,8 +349,5 @@ if __name__ == '__main__':
     print("   3. Use demo credentials to test authentication")
     print("   4. Verify the beautiful UI and smooth functionality!")
     print("="*60)
-    
-    # Import request for error handlers
-    from flask import request
     
     app.run(debug=True, host='0.0.0.0', port=5000)
