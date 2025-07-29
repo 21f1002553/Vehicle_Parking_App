@@ -19,6 +19,11 @@ class AuthService {
     async initializeAuth() {
         if (this.token) {
             try {
+                // Set token in API service first
+                if (window.api) {
+                    window.api.token = this.token;
+                }
+                
                 await this.loadUserProfile();
                 console.log('🔑 Authentication initialized successfully');
             } catch (error) {
@@ -27,7 +32,6 @@ class AuthService {
             }
         }
     }
-
     /**
      * Load user profile from API
      */

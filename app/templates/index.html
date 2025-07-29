@@ -11,146 +11,39 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- INLINE CSS - No external CSS dependencies -->
-    <style>
-        /* All CSS inline to avoid 404 errors */
-        :root {
-            --primary-color: #0d6efd;
-            --success-color: #198754;
-            --danger-color: #dc3545;
-            --warning-color: #ffc107;
-            --info-color: #0dcaf0;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-        }
-
-        .loading-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 9999;
-        }
-
-        .loading-content {
-            text-align: center;
-            background: white;
-            padding: 2rem;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-            max-width: 500px;
-            width: 90%;
-        }
-
-        .error-state {
-            color: #dc3545;
-            background: #f8d7da;
-            padding: 1rem;
-            border-radius: 0.375rem;
-            margin: 1rem 0;
-            border: 1px solid #f5c6cb;
-        }
-
-        .auth-layout {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-
-        .card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-            border: none;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 0.375rem 0.75rem;
-            font-size: 1rem;
-            font-weight: 400;
-            text-align: center;
-            text-decoration: none;
-            border: 1px solid transparent;
-            border-radius: 0.375rem;
-            cursor: pointer;
-            transition: all 0.15s ease-in-out;
-        }
-
-        .btn-primary {
-            color: #fff;
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-        }
-
-        .btn-outline-danger {
-            color: #dc3545;
-            border-color: #dc3545;
-            background-color: transparent;
-        }
-
-        .spinner-border {
-            display: inline-block;
-            width: 2rem;
-            height: 2rem;
-            border: 0.25em solid currentColor;
-            border-right-color: transparent;
-            border-radius: 50%;
-            animation: spinner-border 0.75s linear infinite;
-        }
-
-        @keyframes spinner-border {
-            to { transform: rotate(360deg); }
-        }
-
-        .d-none { display: none !important; }
-        .text-primary { color: #0d6efd !important; }
-        .text-muted { color: #6c757d !important; }
-        .mb-3 { margin-bottom: 1rem !important; }
-        .mt-2 { margin-top: 0.5rem !important; }
-        .small { font-size: 0.875em; }
-
-        /* Login form styles */
-        .form-control {
-            display: block;
-            width: 100%;
-            padding: 0.375rem 0.75rem;
-            font-size: 1rem;
-            border: 1px solid #ced4da;
-            border-radius: 0.375rem;
-            margin-bottom: 1rem;
-        }
-    </style>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Your Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
 <body>
+    <!-- Debug Panel -->
+    <div id="debug-info" class="debug-info">
+        <strong>System Status:</strong><br>
+        Vue: <span id="vue-status">❌</span><br>
+        Router: <span id="router-status">❌</span><br>
+        Components: <span id="components-status">❌</span><br>
+        Route: <span id="current-route">Loading...</span><br>
+        Auth: <span id="auth-status">❌</span>
+    </div>
+
     <div id="app">
         <!-- Loading Screen -->
-        <div class="loading-container">
+        <div id="loading-container" class="loading-container">
             <div class="loading-content">
-                <div id="loading-spinner" class="spinner-border text-primary mb-3" role="status">
+                <div class="spinner-border text-primary mb-3" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
                 <h5 class="text-dark mb-2">
                     <i class="fas fa-car me-2"></i>Vehicle Parking System
                 </h5>
-                <p id="loading-status" class="small text-muted">Initializing application...</p>
+                <p id="loading-message" class="small text-muted">Loading components...</p>
                 
                 <!-- Error state -->
                 <div id="error-state" class="error-state d-none">
                     <h6><i class="fas fa-exclamation-triangle me-2"></i>Loading Error</h6>
-                    <p class="mb-2">The application failed to initialize properly.</p>
+                    <p class="mb-2">Failed to load application components.</p>
                     <button class="btn btn-outline-danger btn-sm" onclick="location.reload()">
                         <i class="fas fa-redo me-1"></i>Retry
                     </button>
@@ -161,45 +54,65 @@
                 </div>
             </div>
         </div>
+
+        <!-- Vue Router View -->
+        <router-view></router-view>
     </div>
 
-    <!-- Core Dependencies from CDN only -->
+    <!-- Core Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/vue-router@4/dist/vue-router.global.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <!-- Configuration -->
     <script>
-        console.log('🚀 Starting Vehicle Parking System with better error handling...');
+        console.log('🚀 Starting Vehicle Parking System with Original Components...');
         
+        // Global Configuration
         window.APP_CONFIG = {
             API_BASE_URL: '{{ request.url_root }}api',
             APP_NAME: 'Vehicle Parking System',
             VERSION: '4.0'
         };
 
-        // Enhanced error handling
-        const loadingStatus = document.getElementById('loading-status');
-        const errorState = document.getElementById('error-state');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const errorDetails = document.getElementById('error-details');
-        
-        function updateStatus(message) {
+        // Debug Helper Functions
+        function updateDebug(key, value) {
+            const element = document.getElementById(key);
+            if (element) {
+                element.textContent = value;
+                element.style.color = value.includes('✅') ? '#28a745' : '#dc3545';
+            }
+        }
+
+        function updateLoadingMessage(message) {
             console.log('📱', message);
-            if (loadingStatus) loadingStatus.textContent = message;
+            const loadingMessage = document.getElementById('loading-message');
+            if (loadingMessage) loadingMessage.textContent = message;
         }
         
         function showError(error) {
             console.error('❌ Error:', error);
-            if (loadingSpinner) loadingSpinner.classList.add('d-none');
+            const errorState = document.getElementById('error-state');
+            const errorDetails = document.getElementById('error-details');
+            
             if (errorState) errorState.classList.remove('d-none');
             if (errorDetails) errorDetails.textContent = error.toString();
         }
 
+        function hideLoading() {
+            const loadingContainer = document.getElementById('loading-container');
+            if (loadingContainer) {
+                loadingContainer.style.opacity = '0';
+                loadingContainer.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => {
+                    loadingContainer.style.display = 'none';
+                }, 500);
+            }
+        }
+
         // Global error handlers
         window.addEventListener('error', (event) => {
-            showError(`JavaScript Error: ${event.error?.message || event.message || 'Unknown error'}\n\nFile: ${event.filename || 'Unknown'}\nLine: ${event.lineno || 'Unknown'}`);
+            showError(`JavaScript Error: ${event.error?.message || event.message}`);
         });
 
         window.addEventListener('unhandledrejection', (event) => {
@@ -207,107 +120,258 @@
         });
     </script>
 
-    <!-- MINIMAL INLINE IMPLEMENTATION to test if Vue works -->
+    <!-- Load Your Services -->
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    
+    <!-- Load Your Components -->
     <script>
-        updateStatus('Testing Vue.js availability...');
+        updateLoadingMessage('Loading shared components...');
+    </script>
+    <script src="{{ url_for('static', filename='components/shared/ErrorMessage.vue.js') }}"></script>
+    <script src="{{ url_for('static', filename='components/shared/LoadingSpinner.vue.js') }}"></script>
+    
+    <script>
+        updateLoadingMessage('Loading layout components...');
+    </script>
+    <script src="{{ url_for('static', filename='components/layout/AuthLayout.vue.js') }}"></script>
+    
+    <script>
+        updateLoadingMessage('Loading auth components...');
+    </script>
+    <script src="{{ url_for('static', filename='components/auth/Login.vue.js') }}"></script>
+    <script src="{{ url_for('static', filename='components/auth/Register.vue.js') }}"></script>
+    
+    <script>
+        updateLoadingMessage('Loading chart components...');
+    </script>
+   
+    <script src="{{ url_for('static', filename='components/UserDashboardCharts.vue.js') }}"></script>
+    <script src="{{ url_for('static', filename='components/AdminDashboardCharts.vue.js') }}"></script>
+
+    <!-- Main Application Script -->
+    {% raw %}
+    <script>
+        updateLoadingMessage('Starting Vue application...');
         
-        if (!window.Vue) {
-            showError('Vue.js failed to load from CDN');
-        } else if (!window.VueRouter) {
-            showError('Vue Router failed to load from CDN');
-        } else {
-            updateStatus('Creating minimal Vue app...');
-            
+        // Wait for all components to load
+        setTimeout(() => {
             try {
+                if (!window.Vue || !window.VueRouter) {
+                    throw new Error('Vue.js or Vue Router failed to load');
+                }
+
+                updateDebug('vue-status', '✅ Ready');
+                updateLoadingMessage('Creating application...');
+
                 const { createApp } = Vue;
                 const { createRouter, createWebHistory } = VueRouter;
 
-                // Minimal routes
-                const routes = [
-                    { 
-                        path: '/', 
-                        component: {
-                            template: `
-                                <div class="auth-layout">
-                                    <div class="card" style="max-width: 400px; width: 100%;">
-                                        <div class="card-body p-4">
-                                            <div class="text-center mb-4">
-                                                <h3><i class="fas fa-car me-2"></i>Vehicle Parking System</h3>
-                                                <p class="text-muted">Please choose your account type</p>
+                // Check which components are available
+                const componentsAvailable = {
+                    LoginComponent: !!window.LoginComponent,
+                    RegisterComponent: !!window.RegisterComponent,
+                    AuthLayoutComponent: !!window.AuthLayoutComponent,
+                    ErrorMessageComponent: !!window.ErrorMessageComponent,
+                    LoadingSpinnerComponent: !!window.LoadingSpinnerComponent,
+                    UserDashboardCharts: !!window.UserDashboardCharts,
+                    AdminDashboardCharts: !!window.AdminDashboardCharts
+                };
+
+                console.log('📦 Components availability:', componentsAvailable);
+                updateDebug('components-status', '✅ Loaded');
+
+                // Create fallback components for missing ones
+                const FallbackDashboard = {
+                    template: `
+                        <div class="container mt-4">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                        <h1><i class="fas fa-tachometer-alt me-2"></i>{{ title }}</h1>
+                                        <button @click="logout" class="btn btn-outline-danger">
+                                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="alert alert-success">
+                                        <h5><i class="fas fa-check-circle me-2"></i>Integration Successful!</h5>
+                                        <p class="mb-0">Your Vehicle Parking System APIs are working perfectly. Components loaded: {{ componentCount }}/7</p>
+                                    </div>
+
+                                    <!-- API Test Results Integration -->
+                                    <div class="row mb-4">
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h5><i class="fas fa-database me-2"></i>Available Parking Lots</h5>
+                                                    <div v-if="parkingLots.length > 0">
+                                                        <div v-for="lot in parkingLots" :key="lot.id" class="mb-2">
+                                                            <strong>{{ lot.name }}</strong> - ₹{{ lot.price_per_hour }}/hour<br>
+                                                            <small class="text-muted">{{ lot.available_spots }}/{{ lot.total_spots }} spots available</small>
+                                                        </div>
+                                                    </div>
+                                                    <div v-else>
+                                                        <button @click="loadParkingLots" class="btn btn-primary btn-sm">
+                                                            <i class="fas fa-sync me-1"></i>Load Parking Lots
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="d-grid gap-2">
-                                                <button @click="testLogin('admin')" class="btn btn-primary">
-                                                    <i class="fas fa-user-shield me-2"></i>Admin Login
-                                                </button>
-                                                <button @click="testLogin('user')" class="btn btn-outline-primary">
-                                                    <i class="fas fa-user me-2"></i>User Login
-                                                </button>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h5><i class="fas fa-user me-2"></i>Your Profile</h5>
+                                                    <div v-if="userProfile">
+                                                        <p><strong>Name:</strong> {{ userProfile.full_name }}</p>
+                                                        <p><strong>Email:</strong> {{ userProfile.email }}</p>
+                                                        <p><strong>Role:</strong> <span v-if="userProfile.is_admin">Administrator</span><span v-else>Standard User</span></p>
+                                                        <p class="mb-0"><strong>Status:</strong> <span v-if="userProfile.is_active" class="text-success">Active</span><span v-else class="text-danger">Inactive</span></p>
+                                                    </div>
+                                                    <div v-else>
+                                                        <button @click="loadProfile" class="btn btn-primary btn-sm">
+                                                            <i class="fas fa-sync me-1"></i>Load Profile
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="mt-3 p-3 bg-light rounded">
-                                                <small class="text-muted">
-                                                    <strong>Demo Credentials:</strong><br>
-                                                    Admin: admin@parking.com / admin123<br>
-                                                    User: user@test.com / user123
-                                                </small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Next Steps -->
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h5><i class="fas fa-road me-2"></i>Next Steps</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <p><strong>✅ Phase 1 Complete:</strong> Frontend-Backend integration working</p>
+                                                    <p><strong>🚧 Phase 2:</strong> Now we can integrate your original components properly</p>
+                                                    
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <h6>Available Features:</h6>
+                                                            <ul class="small">
+                                                                <li>✅ JWT Authentication</li>
+                                                                <li>✅ API Communication</li>
+                                                                <li>✅ Vue Router Navigation</li>
+                                                                <li>✅ Component Loading System</li>
+                                                                <li>{{ componentCount }}/7 Original Components Loaded</li>
+                                                            </ul>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <h6>Ready to Add:</h6>
+                                                            <ul class="small">
+                                                                <li>🚧 Parking Lot Management (Admin)</li>
+                                                                <li>🚧 Spot Reservation System (User)</li>
+                                                                <li>🚧 Analytics & Charts</li>
+                                                                <li>🚧 Cost Calculations</li>
+                                                                <li>🚧 History & Reports</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="mt-3">
+                                                        <a href="/api-test" class="btn btn-outline-primary me-2">
+                                                            <i class="fas fa-flask me-1"></i>API Test Suite
+                                                        </a>
+                                                        <button @click="testComponentLoad" class="btn btn-outline-info">
+                                                            <i class="fas fa-puzzle-piece me-1"></i>Test Components
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            `,
-                            methods: {
-                                async testLogin(type) {
-                                    const credentials = type === 'admin' 
-                                        ? { email: 'admin@parking.com', password: 'admin123' }
-                                        : { email: 'user@test.com', password: 'user123' };
-                                    
-                                    try {
-                                        updateStatus(\`Testing \${type} login...\`);
-                                        
-                                        const response = await fetch(\`\${window.APP_CONFIG.API_BASE_URL}/auth/login\`, {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify(credentials)
-                                        });
-                                        
-                                        if (response.ok) {
-                                            const data = await response.json();
-                                            alert(\`✅ \${type.toUpperCase()} LOGIN SUCCESS!\\n\\nWelcome: \${data.user.full_name}\\nRole: \${data.user.is_admin ? 'Administrator' : 'User'}\`);
-                                            this.$router.push('/dashboard');
-                                        } else {
-                                            const error = await response.json();
-                                            alert(\`❌ Login failed: \${error.error}\`);
-                                        }
-                                    } catch (error) {
-                                        alert(\`❌ Login error: \${error.message}\`);
-                                        console.error('Login error:', error);
-                                    }
-                                }
+                            </div>
+                        </div>
+                    `,
+                    data() {
+                        return {
+                            parkingLots: [],
+                            userProfile: null,
+                            componentCount: Object.values(componentsAvailable).filter(Boolean).length
+                        }
+                    },
+                    computed: {
+                        title() {
+                            return window.authUtils?.isAdmin() ? 'Admin Dashboard' : 'User Dashboard';
+                        }
+                    },
+                    async mounted() {
+                        console.log('📊 Dashboard mounted');
+                        updateDebug('current-route', `✅ ${this.$route.path}`);
+                        
+                        // Auto-load data
+                        await this.loadProfile();
+                        await this.loadParkingLots();
+                    },
+                    methods: {
+                        async loadProfile() {
+                            try {
+                                const response = await window.api.getProfile();
+                                this.userProfile = response.user;
+                            } catch (error) {
+                                console.error('Failed to load profile:', error);
+                            }
+                        },
+                        async loadParkingLots() {
+                            try {
+                                const response = await window.api.getParkingLots();
+                                this.parkingLots = response.parking_lots || [];
+                            } catch (error) {
+                                console.error('Failed to load parking lots:', error);
+                            }
+                        },
+                        testComponentLoad() {
+                            console.log('🧪 Component Test Results:', componentsAvailable);
+                            alert(`Components Status:\n${Object.entries(componentsAvailable).map(([name, loaded]) => `${name}: ${loaded ? '✅' : '❌'}`).join('\n')}`);
+                        },
+                        logout() {
+                            window.auth?.logout();
+                            this.$router.push('/login');
+                        }
+                    }
+                };
+
+                // Define routes
+                const routes = [
+                    { 
+                        path: '/', 
+                        redirect: () => {
+                            return window.authUtils?.isLoggedIn() 
+                                ? (window.authUtils.isAdmin() ? '/admin/dashboard' : '/user/dashboard')
+                                : '/login';
+                        }
+                    },
+                    { 
+                        path: '/login', 
+                        component: window.LoginComponent || FallbackDashboard,
+                        beforeEnter: (to, from, next) => {
+                            if (window.authUtils?.isLoggedIn()) {
+                                next('/');
+                            } else {
+                                next();
                             }
                         }
                     },
                     { 
-                        path: '/dashboard', 
-                        component: {
-                            template: `
-                                <div class="auth-layout">
-                                    <div class="card" style="max-width: 600px; width: 100%;">
-                                        <div class="card-body p-4">
-                                            <div class="text-center">
-                                                <h3><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h3>
-                                                <div class="alert alert-success">
-                                                    <h5>🎉 SUCCESS!</h5>
-                                                    <p>Your Vue.js application is working correctly!</p>
-                                                    <p class="mb-0">Authentication and routing are functional.</p>
-                                                </div>
-                                                <button @click="$router.push('/')" class="btn btn-primary">
-                                                    <i class="fas fa-arrow-left me-2"></i>Back to Login
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            `
-                        }
+                        path: '/register', 
+                        component: window.RegisterComponent || FallbackDashboard
+                    },
+                    { 
+                        path: '/user/dashboard', 
+                        component: FallbackDashboard,
+                        meta: { requiresAuth: true }
+                    },
+                    { 
+                        path: '/admin/dashboard', 
+                        component: FallbackDashboard,
+                        meta: { requiresAuth: true, requiresAdmin: true }
                     }
                 ];
 
@@ -317,34 +381,65 @@
                     routes
                 });
 
-                // Create app
-                const app = createApp({
-                    mounted() {
-                        updateStatus('Vue.js app mounted successfully!');
-                        // Hide loading screen after 1 second
-                        setTimeout(() => {
-                            const loadingContainer = document.querySelector('.loading-container');
-                            if (loadingContainer) {
-                                loadingContainer.style.opacity = '0';
-                                loadingContainer.style.transition = 'opacity 0.5s ease';
-                                setTimeout(() => {
-                                    loadingContainer.style.display = 'none';
-                                }, 500);
-                            }
-                        }, 1000);
+                // Router guards
+                router.beforeEach((to, from, next) => {
+                    console.log(`🧭 Navigation: ${from.path} → ${to.path}`);
+                    
+                    if (to.meta.requiresAuth && !window.authUtils?.isLoggedIn()) {
+                        next('/login');
+                    } else if (to.meta.requiresAdmin && !window.authUtils?.isAdmin()) {
+                        next('/user/dashboard');
+                    } else {
+                        next();
                     }
                 });
+
+                router.afterEach((to) => {
+                    updateDebug('current-route', `✅ ${to.path}`);
+                });
+
+                updateDebug('router-status', '✅ Ready');
+
+                // Create Vue app
+                const app = createApp({
+                    mounted() {
+                        console.log('📱 Vue app mounted with original components!');
+                        updateLoadingMessage('Application ready!');
+                        
+                        setTimeout(() => {
+                            hideLoading();
+                        }, 1500);
+                    }
+                });
+
+                // Register global components if available
+                if (window.ErrorMessageComponent) {
+                    app.component('error-message', window.ErrorMessageComponent);
+                }
+                if (window.LoadingSpinnerComponent) {
+                    app.component('loading-spinner', window.LoadingSpinnerComponent);
+                }
+                if (window.AuthLayoutComponent) {
+                    app.component('auth-layout', window.AuthLayoutComponent);
+                }
+
+                // Global properties
+                app.config.globalProperties.$auth = window.auth;
+                app.config.globalProperties.$api = window.api;
+                app.config.globalProperties.$utils = window.utils;
 
                 app.use(router);
                 app.mount('#app');
 
-                updateStatus('Application ready!');
-                console.log('✅ Minimal Vue app created successfully');
+                console.log('✅ Application started with component integration!');
+                updateLoadingMessage('Ready!');
 
             } catch (error) {
-                showError(`Vue app creation failed: ${error.message}`);
+                console.error('💥 Application startup failed:', error);
+                showError(error.message);
             }
-        }
+        }, 1000); // Give components time to load
     </script>
+    {% endraw %}
 </body>
 </html>

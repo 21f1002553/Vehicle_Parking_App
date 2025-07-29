@@ -32,8 +32,9 @@ document.addEventListener('DOMContentLoaded', function() {
             redirect: to => {
                 console.log('🏠 Home route accessed, checking auth...');
                 try {
-                    if (window.authUtils?.isLoggedIn()) {
-                        if (window.authUtils.isAdmin()) {
+                    const token = localStorage.getItem('access_token');
+                    if (token && window.auth?.currentUser) {
+                        if (window.auth.currentUser.is_admin) {
                             return '/admin/dashboard';
                         } else {
                             return '/user/dashboard';
@@ -55,7 +56,8 @@ document.addEventListener('DOMContentLoaded', function() {
             component: window.LoginComponent || createFallbackComponent('Login'),
             beforeEnter: (to, from, next) => {
                 try {
-                    if (window.authUtils?.isLoggedIn()) {
+                    const token = localStorage.getItem('access_token');
+                    if (token && window.auth?.isAuthenticated) {
                         next(window.auth?.getRedirectPath() || '/');
                     } else {
                         next();
@@ -73,7 +75,8 @@ document.addEventListener('DOMContentLoaded', function() {
             component: window.RegisterComponent || createFallbackComponent('Register'),
             beforeEnter: (to, from, next) => {
                 try {
-                    if (window.authUtils?.isLoggedIn()) {
+                    const token = localStorage.getItem('access_token');
+                    if (token && window.auth?.isAuthenticated) {
                         next(window.auth?.getRedirectPath() || '/');
                     } else {
                         next();
@@ -89,21 +92,21 @@ document.addEventListener('DOMContentLoaded', function() {
         { 
             path: '/user/dashboard', 
             name: 'user-dashboard',
-            component: createDashboardComponent('user'),
+            component: window.UserDashboardComponent || createDashboardComponent('user'),
             meta: { requiresAuth: true, role: 'user' }
         },
         
         { 
             path: '/user/parking-lots', 
             name: 'user-parking-lots',
-            component: createPlaceholderComponent('Find Parking', 'Available parking lots will appear here.'),
+            component: window.UserParkingLotsComponent || createPlaceholderComponent('Find Parking', 'Available parking lots will appear here.'),
             meta: { requiresAuth: true, role: 'user' }
         },
         
         { 
             path: '/user/history', 
             name: 'user-history',
-            component: createPlaceholderComponent('Parking History', 'Your parking history will appear here.'),
+            component: window.UserHistoryComponent || createPlaceholderComponent('Parking History', 'Your parking history will appear here.'),
             meta: { requiresAuth: true, role: 'user' }
         },
         
@@ -118,28 +121,28 @@ document.addEventListener('DOMContentLoaded', function() {
         { 
             path: '/admin/dashboard', 
             name: 'admin-dashboard',
-            component: createDashboardComponent('admin'),
+            component: window.AdminDashboardComponent || createDashboardComponent('admin'),
             meta: { requiresAuth: true, role: 'admin' }
         },
         
         { 
             path: '/admin/lots', 
             name: 'admin-lots',
-            component: createPlaceholderComponent('Parking Lot Management', 'Manage parking lots here.'),
+            component: window.AdminParkingLotsComponent || createPlaceholderComponent('Parking Lot Management', 'Manage parking lots here.'),
             meta: { requiresAuth: true, role: 'admin' }
         },
         
         { 
             path: '/admin/users', 
             name: 'admin-users',
-            component: createPlaceholderComponent('User Management', 'Manage users here.'),
+            component: window.AdminUsersComponent || createPlaceholderComponent('User Management', 'Manage users here.'),
             meta: { requiresAuth: true, role: 'admin' }
         },
         
         { 
             path: '/admin/reservations', 
             name: 'admin-reservations',
-            component: createPlaceholderComponent('Reservation Management', 'Manage reservations here.'),
+            component: window.AdminReservationsComponent || createPlaceholderComponent('Reservation Management', 'Manage reservations here.'),
             meta: { requiresAuth: true, role: 'admin' }
         },
         
@@ -172,7 +175,10 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // Check if route requires authentication
             if (to.meta.requiresAuth) {
-                if (!window.authUtils?.isLoggedIn()) {
+                // Check localStorage token as fallback
+                const token = localStorage.getItem('access_token');
+                
+                if (!token && !window.auth?.isAuthenticated) {
                     console.log('🔒 Route requires auth, redirecting to login');
                     if (window.utils?.showWarning) {
                         window.utils.showWarning('Please login to continue');
@@ -181,23 +187,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // Check role-based access
+                // For role-based access, wait for auth to be loaded or check token
                 if (to.meta.role) {
-                    const userRole = window.authUtils?.getUserRole();
-                    if (to.meta.role !== userRole) {
-                        console.log(`🚫 Access denied. Required: ${to.meta.role}, User: ${userRole}`);
-                        if (window.utils?.showError) {
-                            window.utils.showError('You do not have permission to access this page');
+                    // If auth service is ready, use it
+                    if (window.auth?.currentUser) {
+                        const userRole = window.auth.getUserRole();
+                        if (to.meta.role !== userRole) {
+                            console.log(`🚫 Access denied. Required: ${to.meta.role}, User: ${userRole}`);
+                            if (window.utils?.showError) {
+                                window.utils.showError('You do not have permission to access this page');
+                            }
+                            
+                            // Redirect to appropriate dashboard
+                            if (userRole === 'admin') {
+                                next('/admin/dashboard');
+                            } else if (userRole === 'user') {
+                                next('/user/dashboard');
+                            } else {
+                                next('/login');
+                            }
+                            return;
                         }
-                        
-                        // Redirect to appropriate dashboard
-                        if (userRole === 'admin') {
-                            next('/admin/dashboard');
-                        } else if (userRole === 'user') {
-                            next('/user/dashboard');
-                        } else {
-                            next('/login');
-                        }
+                    } else if (token) {
+                        // Auth not loaded yet, but we have a token, allow navigation
+                        console.log('⏳ Auth loading, allowing navigation with token');
+                    } else {
+                        // No token and no auth, redirect to login
+                        next('/login');
                         return;
                     }
                 }
@@ -241,6 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Failed to initialize app:', error);
                     this.error = 'Failed to initialize application';
                     this.appReady = true;
+                    this.hideLoadingScreen();
                 }
             },
 
@@ -252,9 +269,24 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Update loading status
                         updateLoadingStatus('Setting up authentication...');
                         
-                        // Wait for auth service to initialize
-                        if (window.auth?.token) {
-                            await window.auth.initializeAuth();
+                        // Check for existing token
+                        const token = localStorage.getItem('access_token');
+                        if (token) {
+                            // Set token in services
+                            if (window.auth) {
+                                window.auth.token = token;
+                            }
+                            if (window.api) {
+                                window.api.token = token;
+                            }
+                            
+                            // Try to load user profile
+                            try {
+                                await this.loadUserProfile();
+                            } catch (error) {
+                                console.warn('Failed to load user profile, clearing token');
+                                localStorage.removeItem('access_token');
+                            }
                         }
                         
                         // Set initial auth state
@@ -287,7 +319,27 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.error('❌ Failed to initialize application:', error);
                         this.error = 'Failed to initialize application. Please refresh the page.';
                         this.appReady = true;
+                        this.hideLoadingScreen();
                         showInitializationError(error.message);
+                    }
+                },
+
+                async loadUserProfile() {
+                    const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/auth/profile`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.user && window.auth) {
+                            window.auth.currentUser = data.user;
+                            window.auth.isAuthenticated = true;
+                            this.updateAuthState();
+                        }
+                    } else {
+                        throw new Error('Failed to load profile');
                     }
                 },
 
@@ -308,8 +360,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 async checkApiHealth() {
                     try {
-                        await window.api?.healthCheck();
-                        console.log('💚 API health check passed');
+                        const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/health`);
+                        if (response.ok) {
+                            console.log('💚 API health check passed');
+                        } else {
+                            throw new Error('API health check failed');
+                        }
                     } catch (error) {
                         console.warn('💔 API health check failed:', error);
                         throw error;
@@ -320,6 +376,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     try {
                         this.currentUser = window.auth?.currentUser;
                         this.isAuthenticated = window.auth?.isAuthenticated || false;
+                        console.log('🔄 Auth state updated:', { 
+                            isAuthenticated: this.isAuthenticated, 
+                            user: this.currentUser?.username 
+                        });
                     } catch (error) {
                         console.error('Error updating auth state:', error);
                     }
@@ -343,12 +403,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             console.log('✅ Login successful:', event.detail.user);
                             this.updateAuthState();
                             
-                            // Redirect based on user role
-                            const redirectPath = window.auth?.getRedirectPath() || '/';
-                            this.$router.push(redirectPath);
+                            // Don't redirect here, let the login component handle it
                             
                             if (window.utils?.showSuccess) {
-                                window.utils.showSuccess(`Welcome, ${window.auth?.getUserDisplayName()}!`);
+                                window.utils.showSuccess(`Welcome, ${event.detail.user.full_name || event.detail.user.username}!`);
                             }
                         });
 
@@ -386,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function() {
             computed: {
                 isAdmin() {
                     try {
-                        return window.authUtils?.isAdmin() || false;
+                        return window.auth?.currentUser?.is_admin || false;
                     } catch (error) {
                         console.error('Error checking admin status:', error);
                         return false;
@@ -395,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 isUser() {
                     try {
-                        return window.authUtils?.isUser() || false;
+                        return window.auth?.currentUser && !window.auth.currentUser.is_admin || false;
                     } catch (error) {
                         console.error('Error checking user status:', error);
                         return false;
@@ -404,7 +462,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 userName() {
                     try {
-                        return window.authUtils?.getUserName() || 'Guest';
+                        return window.auth?.currentUser?.full_name || 
+                               window.auth?.currentUser?.username || 
+                               'Guest';
                     } catch (error) {
                         console.error('Error getting user name:', error);
                         return 'Guest';
@@ -445,6 +505,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log('🎉 Vue application mounted successfully');
             console.log('🔍 Debug: window.app and window.router available');
+            
+            // Add debug function
+            // Add this after the app.mount('#app') line in main.js
+            window.debugAuth = function() {
+                console.log('🔍 Auth Debug Info:');
+                console.log('Token in localStorage:', localStorage.getItem('access_token'));
+                console.log('Auth service token:', window.auth?.token);
+                console.log('Is authenticated:', window.auth?.isAuthenticated);
+                console.log('Current user:', window.auth?.currentUser);
+                console.log('API token:', window.api?.token);
+                console.log('Current route:', window.router?.currentRoute.value.path);
+            };
+
+        console.log('🔧 debugAuth function added to window');
             
         } catch (error) {
             console.error('Failed to mount Vue app:', error);
@@ -661,4 +735,4 @@ window.addEventListener('unhandledrejection', (event) => {
     }
 });
 
-console.log('✅ Enhanced main.js loaded with error handling');
+console.log('✅ Enhanced main.js loaded with authentication fixes');

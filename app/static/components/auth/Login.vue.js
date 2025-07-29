@@ -208,15 +208,58 @@ window.LoginComponent = {
             try {
                 console.log('🔑 Attempting login for:', this.form.email);
                 
-                const response = await window.auth.login(this.form.email, this.form.password);
-                
-                console.log('✅ Login successful:', response.user);
-                this.successMessage = `Welcome back, ${response.user.full_name || response.user.username}!`;
-                
-                // Clear form
-                this.resetForm();
-                
-                // Redirect will be handled by auth service events
+                // Call the API directly first
+                const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: this.form.email,
+                        password: this.form.password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.access_token) {
+                    console.log('✅ Login successful:', data.user);
+                    
+                    // 1. Store token in localStorage
+                    localStorage.setItem('access_token', data.access_token);
+                    
+                    // 2. Update auth service manually
+                    if (window.auth) {
+                        window.auth.token = data.access_token;
+                        window.auth.currentUser = data.user;
+                        window.auth.isAuthenticated = true;
+                    }
+                    
+                    // 3. Update API service token
+                    if (window.api) {
+                        window.api.token = data.access_token;
+                    }
+                    
+                    // 4. Emit login success event
+                    window.dispatchEvent(new CustomEvent('login-success', { 
+                        detail: { user: data.user } 
+                    }));
+                    
+                    this.successMessage = `Welcome back, ${data.user.full_name || data.user.username}!`;
+                    
+                    // Clear form
+                    this.resetForm();
+                    
+                    // 5. Force router navigation after a short delay
+                    setTimeout(() => {
+                        const redirectPath = data.user.is_admin ? '/admin/dashboard' : '/user/dashboard';
+                        console.log('🚀 Redirecting to:', redirectPath);
+                        this.$router.push(redirectPath);
+                    }, 1000);
+                    
+                } else {
+                    throw new Error(data.error || 'Login failed');
+                }
                 
             } catch (error) {
                 console.error('❌ Login failed:', error);
@@ -314,6 +357,44 @@ window.LoginComponent = {
             };
             this.errors = {};
             this.errorMessage = null;
+        },
+
+        /**
+         * Check if user already has valid auth
+         */
+        async checkExistingAuth() {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) return;
+
+                const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/auth/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.user) {
+                        // Update auth state
+                        if (window.auth) {
+                            window.auth.token = token;
+                            window.auth.currentUser = data.user;
+                            window.auth.isAuthenticated = true;
+                        }
+                        
+                        // User is already authenticated, redirect
+                        const redirectPath = data.user.is_admin ? '/admin/dashboard' : '/user/dashboard';
+                        this.$router.push(redirectPath);
+                    }
+                } else {
+                    // Invalid token, clear it
+                    localStorage.removeItem('access_token');
+                }
+            } catch (error) {
+                console.log('No existing valid session');
+                localStorage.removeItem('access_token');
+            }
         }
     },
 
@@ -321,9 +402,7 @@ window.LoginComponent = {
         console.log('🔑 Login component mounted');
         
         // Check if user is already logged in
-        if (window.authUtils.isLoggedIn()) {
-            this.$router.push(window.auth.getRedirectPath());
-        }
+        this.checkExistingAuth();
         
         // Focus on email field
         this.$nextTick(() => {

@@ -68,7 +68,7 @@ def register_blueprints(app):
     print("✅ API Blueprints registered")
 
 def register_frontend_routes(app):
-    """Register frontend routes for the Vue.js SPA"""
+    """Register frontend routes for the Vue.js SPA - FIXED VERSION"""
     print("🌐 Registering frontend routes...")
     
     @app.route('/')
@@ -76,25 +76,16 @@ def register_frontend_routes(app):
         """Main application entry point"""
         return render_template('index.html')
     
-    @app.route('/login')
-    def login_page():
-        """Login page route"""
-        return render_template('index.html')
+    @app.route('/api-test')
+    def api_test():
+        return render_template('api_test.html')
     
-    @app.route('/register')
-    def register_page():
-        """Registration page route"""
-        return render_template('index.html')
-    
-    @app.route('/user/<path:path>')
-    def user_routes(path):
-        """User dashboard routes"""
-        return render_template('index.html')
-    
-    @app.route('/admin/<path:path>')
-    def admin_routes(path):
-        """Admin dashboard routes"""
-        return render_template('index.html')
+    # REMOVED PROBLEMATIC ROUTES - These were causing static file conflicts:
+    # @app.route('/login')
+    # @app.route('/register') 
+    # @app.route('/user/<path:path>')
+    # @app.route('/admin/<path:path>')
+    # Vue Router will handle all client-side routing instead
     
     # API health check endpoint
     @app.route('/api/health')
@@ -123,10 +114,7 @@ def register_frontend_routes(app):
             },
             'frontend_routes': {
                 'main': '/',
-                'login': '/login',
-                'register': '/register',
-                'user_dashboard': '/user/*',
-                'admin_dashboard': '/admin/*'
+                'spa_routes': 'Handled by Vue Router client-side'
             }
         })
     
@@ -285,16 +273,21 @@ def init_database(app):
 # Create app instance
 app = create_app()
 
-# Error handlers
+# FIXED Error handlers - This was the main problem!
 @app.errorhandler(404)
 def not_found(error):
-    """Handle 404 errors - redirect to frontend for SPA routing"""
+    """Handle 404 errors - FIXED to properly handle static files"""
+    # For API endpoints, return JSON 404
     if request.path.startswith('/api/'):
-        # API endpoints should return JSON 404
         return jsonify({'error': 'API endpoint not found'}), 404
-    else:
-        # Frontend routes should serve the SPA
-        return render_template('index.html')
+    
+    # For static files, let Flask handle it properly (don't redirect to SPA)
+    if request.path.startswith('/static/'):
+        # Return proper 404 for missing static files instead of HTML
+        return "File not found", 404
+    
+    # For all other routes (SPA client-side routes), serve the Vue.js app
+    return render_template('index.html')
 
 @app.errorhandler(500)
 def internal_error(error):
@@ -326,8 +319,7 @@ if __name__ == '__main__':
     print("="*60)
     print("🌐 Frontend Access:")
     print("   Main App:        http://localhost:5000")
-    print("   Login:           http://localhost:5000/login")
-    print("   Register:        http://localhost:5000/register")
+    print("   (All routes handled by Vue Router)")
     print("")
     print("🔐 Demo Credentials:")
     print("   Admin:   admin@parking.com / admin123")
@@ -345,9 +337,9 @@ if __name__ == '__main__':
     print("")
     print("🎯 Next Steps:")
     print("   1. Open http://localhost:5000 in your browser")
-    print("   2. You'll be redirected to the login page")
+    print("   2. Vue Router will handle all navigation")
     print("   3. Use demo credentials to test authentication")
-    print("   4. Verify the beautiful UI and smooth functionality!")
+    print("   4. Static files should now load correctly!")
     print("="*60)
     
     app.run(debug=True, host='0.0.0.0', port=5000)
