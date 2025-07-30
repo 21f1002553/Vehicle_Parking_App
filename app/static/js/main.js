@@ -1,6 +1,5 @@
 /**
- * Main Vue.js Application - FIXED VERSION with Better Error Handling
- * Entry point for the Vehicle Parking System frontend
+ * Main Vue.js Application - Updated with FallbackDashboard
  */
 
 // Enhanced initialization with better error handling
@@ -23,515 +22,345 @@ document.addEventListener('DOMContentLoaded', function() {
     const { createApp } = Vue;
     const { createRouter, createWebHistory } = VueRouter;
 
-    // Define routes with better error handling
-    const routes = [
-        // Public routes
-        { 
-            path: '/', 
-            name: 'home',
-            redirect: to => {
-                console.log('🏠 Home route accessed, checking auth...');
-                try {
-                    const token = localStorage.getItem('access_token');
-                    if (token && window.auth?.currentUser) {
-                        if (window.auth.currentUser.is_admin) {
-                            return '/admin/dashboard';
-                        } else {
-                            return '/user/dashboard';
-                        }
-                    } else {
-                        return '/login';
-                    }
-                } catch (error) {
-                    console.error('Error in home redirect:', error);
-                    return '/login';
-                }
-            }
-        },
-        
-        // Auth routes
-        { 
-            path: '/login', 
-            name: 'login',
-            component: window.LoginComponent || createFallbackComponent('Login'),
-            beforeEnter: (to, from, next) => {
-                try {
-                    const token = localStorage.getItem('access_token');
-                    if (token && window.auth?.isAuthenticated) {
-                        next(window.auth?.getRedirectPath() || '/');
-                    } else {
-                        next();
-                    }
-                } catch (error) {
-                    console.error('Error in login guard:', error);
-                    next();
-                }
-            }
-        },
-        
-        { 
-            path: '/register', 
-            name: 'register',
-            component: window.RegisterComponent || createFallbackComponent('Register'),
-            beforeEnter: (to, from, next) => {
-                try {
-                    const token = localStorage.getItem('access_token');
-                    if (token && window.auth?.isAuthenticated) {
-                        next(window.auth?.getRedirectPath() || '/');
-                    } else {
-                        next();
-                    }
-                } catch (error) {
-                    console.error('Error in register guard:', error);
-                    next();
-                }
-            }
-        },
-
-        // User routes
-        { 
-            path: '/user/dashboard', 
-            name: 'user-dashboard',
-            component: window.UserDashboardComponent || createDashboardComponent('user'),
-            meta: { requiresAuth: true, role: 'user' }
-        },
-        
-        { 
-            path: '/user/parking-lots', 
-            name: 'user-parking-lots',
-            component: window.UserParkingLotsComponent || createPlaceholderComponent('Find Parking', 'Available parking lots will appear here.'),
-            meta: { requiresAuth: true, role: 'user' }
-        },
-        
-        { 
-            path: '/user/history', 
-            name: 'user-history',
-            component: window.UserHistoryComponent || createPlaceholderComponent('Parking History', 'Your parking history will appear here.'),
-            meta: { requiresAuth: true, role: 'user' }
-        },
-        
-        { 
-            path: '/user/analytics', 
-            name: 'user-analytics',
-            component: window.UserDashboardCharts || createPlaceholderComponent('My Analytics', 'Your analytics will appear here.'),
-            meta: { requiresAuth: true, role: 'user' }
-        },
-
-        // Admin routes
-        { 
-            path: '/admin/dashboard', 
-            name: 'admin-dashboard',
-            component: window.AdminDashboardComponent || createDashboardComponent('admin'),
-            meta: { requiresAuth: true, role: 'admin' }
-        },
-        
-        { 
-            path: '/admin/lots', 
-            name: 'admin-lots',
-            component: window.AdminParkingLotsComponent || createPlaceholderComponent('Parking Lot Management', 'Manage parking lots here.'),
-            meta: { requiresAuth: true, role: 'admin' }
-        },
-        
-        { 
-            path: '/admin/users', 
-            name: 'admin-users',
-            component: window.AdminUsersComponent || createPlaceholderComponent('User Management', 'Manage users here.'),
-            meta: { requiresAuth: true, role: 'admin' }
-        },
-        
-        { 
-            path: '/admin/reservations', 
-            name: 'admin-reservations',
-            component: window.AdminReservationsComponent || createPlaceholderComponent('Reservation Management', 'Manage reservations here.'),
-            meta: { requiresAuth: true, role: 'admin' }
-        },
-        
-        { 
-            path: '/admin/analytics', 
-            name: 'admin-analytics',
-            component: window.AdminDashboardCharts || createPlaceholderComponent('Admin Analytics', 'Admin analytics will appear here.'),
-            meta: { requiresAuth: true, role: 'admin' }
-        },
-
-        // 404 route
-        { 
-            path: '/:pathMatch(.*)*', 
-            name: 'not-found',
-            component: createNotFoundComponent()
-        }
-    ];
-
-    // Create router with error handling
-    console.log('🧭 Creating Vue Router...');
-    const router = createRouter({
-        history: createWebHistory(),
-        routes
-    });
-
-    // Enhanced router guards with error handling
-    router.beforeEach((to, from, next) => {
-        console.log('🧭 Navigating from:', from.path, 'to:', to.path);
-        
+    // Wait for components to load
+    setTimeout(() => {
         try {
-            // Check if route requires authentication
-            if (to.meta.requiresAuth) {
-                // Check localStorage token as fallback
-                const token = localStorage.getItem('access_token');
+            updateDebug('vue-status', '✅ Ready');
+            updateLoadingMessage('Creating application...');
+
+            // Check which components are available
+            const componentsAvailable = {
+                // Auth Components
+                LoginComponent: !!window.LoginComponent,
+                RegisterComponent: !!window.RegisterComponent,
+                AuthLayoutComponent: !!window.AuthLayoutComponent,
                 
-                if (!token && !window.auth?.isAuthenticated) {
-                    console.log('🔒 Route requires auth, redirecting to login');
-                    if (window.utils?.showWarning) {
-                        window.utils.showWarning('Please login to continue');
-                    }
-                    next('/login');
-                    return;
-                }
+                // Shared Components
+                ErrorMessageComponent: !!window.ErrorMessageComponent,
+                LoadingSpinnerComponent: !!window.LoadingSpinnerComponent,
+                CostCalculationComponent: !!window.CostCalculationComponent,
+                HistoryReportsComponent: !!window.HistoryReportsComponent,
                 
-                // For role-based access, wait for auth to be loaded or check token
-                if (to.meta.role) {
-                    // If auth service is ready, use it
-                    if (window.auth?.currentUser) {
-                        const userRole = window.auth.getUserRole();
-                        if (to.meta.role !== userRole) {
-                            console.log(`🚫 Access denied. Required: ${to.meta.role}, User: ${userRole}`);
-                            if (window.utils?.showError) {
-                                window.utils.showError('You do not have permission to access this page');
-                            }
-                            
-                            // Redirect to appropriate dashboard
-                            if (userRole === 'admin') {
-                                next('/admin/dashboard');
-                            } else if (userRole === 'user') {
-                                next('/user/dashboard');
-                            } else {
-                                next('/login');
-                            }
-                            return;
-                        }
-                    } else if (token) {
-                        // Auth not loaded yet, but we have a token, allow navigation
-                        console.log('⏳ Auth loading, allowing navigation with token');
-                    } else {
-                        // No token and no auth, redirect to login
-                        next('/login');
-                        return;
-                    }
-                }
-            }
-            
-            next();
-        } catch (error) {
-            console.error('Router guard error:', error);
-            next(); // Continue navigation even if guard fails
-        }
-    });
-
-    // Router error handling
-    router.onError((error) => {
-        console.error('Router error:', error);
-        if (window.utils?.showError) {
-            window.utils.showError('Navigation error occurred');
-        }
-    });
-
-    // Create Vue application with enhanced error handling
-    console.log('📱 Creating Vue app...');
-    try {
-        const app = createApp({
-            data() {
-                return {
-                    appReady: false,
-                    currentUser: null,
-                    isAuthenticated: false,
-                    loading: false,
-                    error: null,
-                    initializationComplete: false
-                }
-            },
-
-            async mounted() {
-                console.log('📱 Vue app mounted');
-                try {
-                    await this.initializeApp();
-                } catch (error) {
-                    console.error('Failed to initialize app:', error);
-                    this.error = 'Failed to initialize application';
-                    this.appReady = true;
-                    this.hideLoadingScreen();
-                }
-            },
-
-            methods: {
-                async initializeApp() {
-                    try {
-                        console.log('🔧 Initializing application...');
-                        
-                        // Update loading status
-                        updateLoadingStatus('Setting up authentication...');
-                        
-                        // Check for existing token
-                        const token = localStorage.getItem('access_token');
-                        if (token) {
-                            // Set token in services
-                            if (window.auth) {
-                                window.auth.token = token;
-                            }
-                            if (window.api) {
-                                window.api.token = token;
-                            }
-                            
-                            // Try to load user profile
-                            try {
-                                await this.loadUserProfile();
-                            } catch (error) {
-                                console.warn('Failed to load user profile, clearing token');
-                                localStorage.removeItem('access_token');
-                            }
-                        }
-                        
-                        // Set initial auth state
-                        this.updateAuthState();
-                        
-                        // Setup auth event listeners
-                        this.setupAuthListeners();
-                        
-                        updateLoadingStatus('Checking API connection...');
-                        
-                        // Check API health (optional)
-                        try {
-                            await this.checkApiHealth();
-                        } catch (error) {
-                            console.warn('API health check failed, continuing anyway:', error);
-                        }
-                        
-                        updateLoadingStatus('Application ready!');
-                        
-                        // Mark app as ready
-                        this.appReady = true;
-                        this.initializationComplete = true;
-                        
-                        // Hide loading screen
-                        this.hideLoadingScreen();
-                        
-                        console.log('✅ Application initialized successfully');
-                        
-                    } catch (error) {
-                        console.error('❌ Failed to initialize application:', error);
-                        this.error = 'Failed to initialize application. Please refresh the page.';
-                        this.appReady = true;
-                        this.hideLoadingScreen();
-                        showInitializationError(error.message);
-                    }
-                },
-
-                async loadUserProfile() {
-                    const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/auth/profile`, {
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                        }
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.user && window.auth) {
-                            window.auth.currentUser = data.user;
-                            window.auth.isAuthenticated = true;
-                            this.updateAuthState();
-                        }
-                    } else {
-                        throw new Error('Failed to load profile');
-                    }
-                },
-
-                hideLoadingScreen() {
-                    try {
-                        const loadingContainer = document.querySelector('.loading-container');
-                        if (loadingContainer) {
-                            loadingContainer.style.opacity = '0';
-                            loadingContainer.style.transition = 'opacity 0.5s ease';
-                            setTimeout(() => {
-                                loadingContainer.style.display = 'none';
-                            }, 500);
-                        }
-                    } catch (error) {
-                        console.warn('Error hiding loading screen:', error);
-                    }
-                },
-
-                async checkApiHealth() {
-                    try {
-                        const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/health`);
-                        if (response.ok) {
-                            console.log('💚 API health check passed');
-                        } else {
-                            throw new Error('API health check failed');
-                        }
-                    } catch (error) {
-                        console.warn('💔 API health check failed:', error);
-                        throw error;
-                    }
-                },
-
-                updateAuthState() {
-                    try {
-                        this.currentUser = window.auth?.currentUser;
-                        this.isAuthenticated = window.auth?.isAuthenticated || false;
-                        console.log('🔄 Auth state updated:', { 
-                            isAuthenticated: this.isAuthenticated, 
-                            user: this.currentUser?.username 
-                        });
-                    } catch (error) {
-                        console.error('Error updating auth state:', error);
-                    }
-                },
-
-                setupAuthListeners() {
-                    try {
-                        // Listen for auth state changes
-                        window.addEventListener('user-updated', (event) => {
-                            console.log('👤 User updated:', event.detail.user);
-                            this.updateAuthState();
-                        });
-
-                        window.addEventListener('auth-cleared', () => {
-                            console.log('🔓 Auth cleared');
-                            this.updateAuthState();
-                            this.$router.push('/login');
-                        });
-
-                        window.addEventListener('login-success', (event) => {
-                            console.log('✅ Login successful:', event.detail.user);
-                            this.updateAuthState();
-                            
-                            // Don't redirect here, let the login component handle it
-                            
-                            if (window.utils?.showSuccess) {
-                                window.utils.showSuccess(`Welcome, ${event.detail.user.full_name || event.detail.user.username}!`);
-                            }
-                        });
-
-                        window.addEventListener('logout', () => {
-                            console.log('👋 User logged out');
-                            this.updateAuthState();
-                            this.$router.push('/login');
-                            if (window.utils?.showInfo) {
-                                window.utils.showInfo('You have been logged out successfully');
-                            }
-                        });
-                    } catch (error) {
-                        console.error('Error setting up auth listeners:', error);
-                    }
-                },
-
-                // Global error handler
-                handleError(error, context = '') {
-                    console.error('App Error:', error);
-                    const message = window.utils?.handleApiError(error, context) || 'An error occurred';
-                    this.error = message;
-                },
-
-                // Logout method
-                logout() {
-                    try {
-                        window.auth?.logout();
-                    } catch (error) {
-                        console.error('Logout error:', error);
-                    }
-                }
-            },
-
-            // Global computed properties
-            computed: {
-                isAdmin() {
-                    try {
-                        return window.auth?.currentUser?.is_admin || false;
-                    } catch (error) {
-                        console.error('Error checking admin status:', error);
-                        return false;
-                    }
-                },
+                // Dashboard Components
+                UserDashboard: !!window.UserDashboard,
+                AdminDashboard: !!window.AdminDashboard,
+                UserDashboardCharts: !!window.UserDashboardCharts,
+                AdminDashboardCharts: !!window.AdminDashboardCharts,
                 
-                isUser() {
-                    try {
-                        return window.auth?.currentUser && !window.auth.currentUser.is_admin || false;
-                    } catch (error) {
-                        console.error('Error checking user status:', error);
-                        return false;
-                    }
-                },
-                
-                userName() {
-                    try {
-                        return window.auth?.currentUser?.full_name || 
-                               window.auth?.currentUser?.username || 
-                               'Guest';
-                    } catch (error) {
-                        console.error('Error getting user name:', error);
-                        return 'Guest';
-                    }
-                }
-            }
-        });
-
-        // Use router
-        app.use(router);
-
-        // Global properties with error handling
-        app.config.globalProperties.$auth = window.auth;
-        app.config.globalProperties.$api = window.api;
-        app.config.globalProperties.$utils = window.utils;
-
-        // Enhanced global error handler
-        app.config.errorHandler = (error, instance, info) => {
-            console.error('Vue error:', error);
-            console.error('Error info:', info);
-            console.error('Component instance:', instance);
-            
-            showInitializationError(`Vue Error: ${error.message}`);
-            
-            if (window.utils?.showError) {
-                window.utils.showError('An application error occurred');
-            }
-        };
-
-        // Mount the app with error handling
-        console.log('🔗 Mounting Vue app...');
-        try {
-            const mountedApp = app.mount('#app');
-            
-            // Make app and router globally available
-            window.app = mountedApp;
-            window.router = router;
-
-            console.log('🎉 Vue application mounted successfully');
-            console.log('🔍 Debug: window.app and window.router available');
-            
-            // Add debug function
-            // Add this after the app.mount('#app') line in main.js
-            window.debugAuth = function() {
-                console.log('🔍 Auth Debug Info:');
-                console.log('Token in localStorage:', localStorage.getItem('access_token'));
-                console.log('Auth service token:', window.auth?.token);
-                console.log('Is authenticated:', window.auth?.isAuthenticated);
-                console.log('Current user:', window.auth?.currentUser);
-                console.log('API token:', window.api?.token);
-                console.log('Current route:', window.router?.currentRoute.value.path);
+                // Feature Components
+                AdminParkingLots: !!window.AdminParkingLots,
+                UserHistory: !!window.UserHistory,
+                UserSpotReservation: !!window.UserSpotReservation
             };
 
-        console.log('🔧 debugAuth function added to window');
-            
+            console.log('📦 Components availability:', componentsAvailable);
+            updateDebug('components-status', `✅ ${Object.values(componentsAvailable).filter(Boolean).length}/12 Loaded`);
+
+            // Create fallback dashboard component (moved from HTML template)
+            const FallbackDashboard = {
+                template: `
+                    <div class="container mt-4">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h1><i class="fas fa-tachometer-alt me-2"></i>{{title}}</h1>
+                                    <button @click="logout" class="btn btn-outline-danger">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                    </button>
+                                </div>
+                                
+                                <div class="alert alert-success">
+                                    <h5><i class="fas fa-check-circle me-2"></i>All Components Loaded!</h5>
+                                    <p class="mb-0">Your Vehicle Parking System is ready. Components loaded: {{componentCount}}/12</p>
+                                </div>
+
+                                <!-- Quick Stats -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h5><i class="fas fa-database me-2"></i>Available Parking Lots</h5>
+                                                <div v-if="parkingLots.length > 0">
+                                                    <div v-for="lot in parkingLots" :key="lot.id" class="mb-2">
+                                                        <strong>{{lot.name}}</strong> - ₹{{lot.price_per_hour}}/hour<br>
+                                                        <small class="text-muted">{{lot.available_spots}}/{{lot.total_spots}} spots available</small>
+                                                    </div>
+                                                </div>
+                                                <div v-else>
+                                                    <button @click="loadParkingLots" class="btn btn-primary btn-sm">
+                                                        <i class="fas fa-sync me-1"></i>Load Parking Lots
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h5><i class="fas fa-user me-2"></i>Your Profile</h5>
+                                                <div v-if="userProfile">
+                                                    <p><strong>Name:</strong> {{userProfile.full_name}}</p>
+                                                    <p><strong>Email:</strong> {{userProfile.email}}</p>
+                                                    <p><strong>Role:</strong> <span v-if="userProfile.is_admin">Administrator</span><span v-else>Standard User</span></p>
+                                                    <p class="mb-0"><strong>Status:</strong> <span v-if="userProfile.is_active" class="text-success">Active</span><span v-else class="text-danger">Inactive</span></p>
+                                                </div>
+                                                <div v-else>
+                                                    <button @click="loadProfile" class="btn btn-primary btn-sm">
+                                                        <i class="fas fa-sync me-1"></i>Load Profile
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Component Status -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <h5><i class="fas fa-puzzle-piece me-2"></i>Component Status</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <h6>✅ Loaded Components:</h6>
+                                                        <ul class="small">
+                                                            <li v-for="(loaded, name) in componentsAvailable" v-if="loaded" :key="name">
+                                                                {{name}}
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <h6>Available Actions:</h6>
+                                                        <div class="btn-group-vertical d-grid gap-2" v-if="userProfile">
+                                                            <router-link v-if="userProfile.is_admin" to="/admin/lots" class="btn btn-outline-primary btn-sm">
+                                                                <i class="fas fa-building me-1"></i>Manage Parking Lots
+                                                            </router-link>
+                                                            <router-link v-if="userProfile.is_admin" to="/admin/analytics" class="btn btn-outline-success btn-sm">
+                                                                <i class="fas fa-chart-bar me-1"></i>View Analytics
+                                                            </router-link>
+                                                            <router-link v-if="!userProfile.is_admin" to="/user/reserve" class="btn btn-outline-primary btn-sm">
+                                                                <i class="fas fa-car me-1"></i>Reserve Parking
+                                                            </router-link>
+                                                            <router-link v-if="!userProfile.is_admin" to="/user/history" class="btn btn-outline-info btn-sm">
+                                                                <i class="fas fa-history me-1"></i>View History
+                                                            </router-link>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="mt-3 text-center">
+                                                    <a href="/api-test" class="btn btn-outline-secondary me-2">
+                                                        <i class="fas fa-flask me-1"></i>API Test Suite
+                                                    </a>
+                                                    <button @click="testComponentLoad" class="btn btn-outline-info">
+                                                        <i class="fas fa-bug me-1"></i>Debug Components
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                data() {
+                    return {
+                        parkingLots: [],
+                        userProfile: null,
+                        componentCount: Object.values(componentsAvailable).filter(Boolean).length,
+                        componentsAvailable: componentsAvailable
+                    }
+                },
+                computed: {
+                    title() {
+                        return window.authUtils?.isAdmin() ? 'Admin Dashboard' : 'User Dashboard';
+                    }
+                },
+                async mounted() {
+                    console.log('📊 Dashboard mounted');
+                    updateDebug('current-route', `✅ ${this.$route.path}`);
+                    
+                    // Auto-load data
+                    await this.loadProfile();
+                    await this.loadParkingLots();
+                },
+                methods: {
+                    async loadProfile() {
+                        try {
+                            const response = await window.api.getProfile();
+                            this.userProfile = response.user;
+                        } catch (error) {
+                            console.error('Failed to load profile:', error);
+                        }
+                    },
+                    async loadParkingLots() {
+                        try {
+                            const response = await window.api.getParkingLots();
+                            this.parkingLots = response.parking_lots || [];
+                        } catch (error) {
+                            console.error('Failed to load parking lots:', error);
+                        }
+                    },
+                    testComponentLoad() {
+                        console.log('🧪 Component Test Results:', componentsAvailable);
+                        alert(`Components Status:\n${Object.entries(componentsAvailable).map(([name, loaded]) => `${name}: ${loaded ? '✅' : '❌'}`).join('\n')}`);
+                    },
+                    logout() {
+                        window.auth?.logout();
+                        this.$router.push('/login');
+                    }
+                }
+            };
+
+            // Define routes with your actual components
+            const routes = [
+                { 
+                    path: '/', 
+                    redirect: () => {
+                        return window.authUtils?.isLoggedIn() 
+                            ? (window.authUtils.isAdmin() ? '/admin/dashboard' : '/user/dashboard')
+                            : '/login';
+                    }
+                },
+                { 
+                    path: '/login', 
+                    component: window.LoginComponent || FallbackDashboard,
+                    beforeEnter: (to, from, next) => {
+                        if (window.authUtils?.isLoggedIn()) {
+                            next('/');
+                        } else {
+                            next();
+                        }
+                    }
+                },
+                { 
+                    path: '/register', 
+                    component: window.RegisterComponent || FallbackDashboard
+                },
+                // Find this section in your routes array
+                { 
+                    path: '/user/dashboard', 
+                    name: 'user-dashboard',
+                    component: window.UserDashboardComponent || createDashboardComponent('user'),
+                    meta: { requiresAuth: true, role: 'user' }
+                },
+
+                { 
+                    path: '/user/reserve', 
+                    name: 'user-reserve',
+                    component: window.UserSpotReservationComponent || createPlaceholderComponent('Reserve Parking', 'Reservation system will appear here.'),
+                    meta: { requiresAuth: true, role: 'user' }
+                },
+
+                { 
+                    path: '/user/history', 
+                    name: 'user-history',
+                    component: window.UserHistoryComponent || createPlaceholderComponent('Parking History', 'Your parking history will appear here.'),
+                    meta: { requiresAuth: true, role: 'user' }
+                },
+                { 
+                    path: '/user/analytics', 
+                    component: window.UserDashboardCharts || FallbackDashboard,
+                    meta: { requiresAuth: true }
+                },
+                { 
+                    path: '/admin/dashboard', 
+                    component: window.AdminDashboard || FallbackDashboard,
+                    meta: { requiresAuth: true, requiresAdmin: true }
+                },
+                { 
+                    path: '/admin/lots', 
+                    component: window.AdminParkingLots || FallbackDashboard,
+                    meta: { requiresAuth: true, requiresAdmin: true }
+                },
+                { 
+                    path: '/admin/analytics', 
+                    component: window.AdminDashboardCharts || FallbackDashboard,
+                    meta: { requiresAuth: true, requiresAdmin: true }
+                }
+            ];
+
+            // Create router
+            const router = createRouter({
+                history: createWebHistory(),
+                routes
+            });
+
+            // Router guards
+            router.beforeEach((to, from, next) => {
+                console.log(`🧭 Navigation: ${from.path} → ${to.path}`);
+                
+                if (to.meta.requiresAuth && !window.authUtils?.isLoggedIn()) {
+                    next('/login');
+                } else if (to.meta.requiresAdmin && !window.authUtils?.isAdmin()) {
+                    next('/user/dashboard');
+                } else {
+                    next();
+                }
+            });
+
+            router.afterEach((to) => {
+                updateDebug('current-route', `✅ ${to.path}`);
+            });
+
+            updateDebug('router-status', '✅ Ready');
+
+            // Create Vue app
+            const app = createApp({
+                data() {
+                    return {
+                        appReady: false,
+                        currentUser: null,
+                        isAuthenticated: false,
+                        loading: false,
+                        error: null,
+                        initializationComplete: false,
+                        loaded: true  // Add this line to fix the warning
+                    }
+                },
+                mounted() {
+                    console.log('📱 Vue app mounted with ALL components!');
+                    updateLoadingMessage('Application ready!');
+                    
+                    setTimeout(() => {
+                        hideLoading();
+                    }, 1500);
+                }
+            });
+
+            // Register global components if available
+            if (window.ErrorMessageComponent) {
+                app.component('error-message', window.ErrorMessageComponent);
+            }
+            if (window.LoadingSpinnerComponent) {
+                app.component('loading-spinner', window.LoadingSpinnerComponent);
+            }
+            if (window.AuthLayoutComponent) {
+                app.component('auth-layout', window.AuthLayoutComponent);
+            }
+
+            // Global properties
+            app.config.globalProperties.$auth = window.auth;
+            app.config.globalProperties.$api = window.api;
+            app.config.globalProperties.$utils = window.utils;
+
+            app.use(router);
+            app.mount('#app');
+
+            console.log('✅ Application started with ALL components integrated!');
+            updateLoadingMessage('Ready!');
+
         } catch (error) {
-            console.error('Failed to mount Vue app:', error);
-            showInitializationError(`Failed to mount application: ${error.message}`);
+            console.error('💥 Application startup failed:', error);
+            showInitializationError(error.message);
         }
-        
-    } catch (error) {
-        console.error('Failed to create Vue app:', error);
-        showInitializationError(`Failed to create application: ${error.message}`);
-    }
+    }, 1000); // Give components time to load
 });
 
-// Helper functions for creating fallback components
+// Helper functions (rest of your existing main.js functions)
 function createFallbackComponent(componentName) {
     return {
         template: `
@@ -578,85 +407,6 @@ function createPlaceholderComponent(title, description) {
                 </div>
             </div>
         `
-    };
-}
-
-function createDashboardComponent(role) {
-    const isAdmin = role === 'admin';
-    return {
-        template: `
-            <div class="container mt-4">
-                <div class="row">
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h1>
-                                <i class="fas fa-tachometer-alt me-2"></i>
-                                ${isAdmin ? 'Admin' : 'User'} Dashboard
-                            </h1>
-                            <button @click="logout" class="btn btn-outline-danger">
-                                <i class="fas fa-sign-out-alt me-2"></i>Logout
-                            </button>
-                        </div>
-                        
-                        <div class="alert alert-success">
-                            <h5><i class="fas fa-check-circle me-2"></i>Welcome ${isAdmin ? 'Administrator' : 'User'}!</h5>
-                            <p class="mb-0">Your dashboard is loading. This is a functional placeholder that shows authentication is working.</p>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5><i class="fas fa-info-circle me-2"></i>System Status</h5>
-                                        <p>✅ Authentication: Working</p>
-                                        <p>✅ API Connection: Active</p>
-                                        <p>✅ User Role: ${isAdmin ? 'Administrator' : 'Standard User'}</p>
-                                        <p class="mb-0">✅ Dashboard: Loaded</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5><i class="fas fa-cogs me-2"></i>Quick Actions</h5>
-                                        ${isAdmin ? `
-                                            <router-link to="/admin/lots" class="btn btn-primary btn-sm me-2 mb-2">
-                                                <i class="fas fa-building me-1"></i>Manage Lots
-                                            </router-link>
-                                            <router-link to="/admin/users" class="btn btn-info btn-sm me-2 mb-2">
-                                                <i class="fas fa-users me-1"></i>Manage Users
-                                            </router-link>
-                                            <router-link to="/admin/analytics" class="btn btn-success btn-sm mb-2">
-                                                <i class="fas fa-chart-bar me-1"></i>Analytics
-                                            </router-link>
-                                        ` : `
-                                            <router-link to="/user/parking-lots" class="btn btn-primary btn-sm me-2 mb-2">
-                                                <i class="fas fa-search me-1"></i>Find Parking
-                                            </router-link>
-                                            <router-link to="/user/history" class="btn btn-info btn-sm me-2 mb-2">
-                                                <i class="fas fa-history me-1"></i>My History
-                                            </router-link>
-                                            <router-link to="/user/analytics" class="btn btn-success btn-sm mb-2">
-                                                <i class="fas fa-chart-pie me-1"></i>My Analytics
-                                            </router-link>
-                                        `}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `,
-        methods: {
-            logout() {
-                try {
-                    window.auth?.logout();
-                } catch (error) {
-                    console.error('Logout error:', error);
-                }
-            }
-        }
     };
 }
 
@@ -735,4 +485,4 @@ window.addEventListener('unhandledrejection', (event) => {
     }
 });
 
-console.log('✅ Enhanced main.js loaded with authentication fixes');
+console.log('✅ Enhanced main.js loaded with separated Vue.js components');
