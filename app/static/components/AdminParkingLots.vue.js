@@ -1,7 +1,4 @@
-/**
- * AdminParkingLots.vue.js - Admin Parking Lot Management Component
- * Complete CRUD operations for parking lots with spot management
- */
+
 
 window.AdminParkingLotsComponent = {
     name: 'AdminParkingLots',
@@ -514,7 +511,7 @@ window.AdminParkingLotsComponent = {
             showEditModal: false,
             showSpotsModal: false,
             
-            // Current lot being edited
+    
             currentLot: this.getEmptyLot(),
             selectedLot: null,
             errors: {},
@@ -540,8 +537,8 @@ window.AdminParkingLotsComponent = {
     },
 
     methods: {
-        /**
-         * Load all parking lots
+        /*
+         parking lots
          */
         async loadParkingLots() {
             this.loading = true;
@@ -562,7 +559,7 @@ window.AdminParkingLotsComponent = {
         },
 
         /**
-         * Update statistics
+         statistics
          */
         updateStatistics() {
             this.statistics = {
@@ -574,12 +571,12 @@ window.AdminParkingLotsComponent = {
         },
 
         /**
-         * Filter parking lots based on search and status
+         Filter 
          */
         filterLots() {
             let filtered = [...this.parkingLots];
 
-            // Search filter
+          
             if (this.searchQuery) {
                 const query = this.searchQuery.toLowerCase();
                 filtered = filtered.filter(lot => 
@@ -602,9 +599,9 @@ window.AdminParkingLotsComponent = {
             this.sortLots();
         },
 
-        /**
-         * Sort parking lots
-         */
+      
+
+
         sortLots() {
             this.filteredLots.sort((a, b) => {
                 switch (this.sortBy) {
@@ -638,17 +635,14 @@ window.AdminParkingLotsComponent = {
             this.showEditModal = true;
         },
 
-        /**
-         * View spots
-         */
+        
+
         viewSpots(lot) {
             this.selectedLot = lot;
             this.showSpotsModal = true;
         },
 
-        /**
-         * Toggle lot status
-         */
+        
         async toggleLotStatus(lot) {
             try {
                 const updatedData = { is_active: !lot.is_active };
@@ -667,9 +661,7 @@ window.AdminParkingLotsComponent = {
             }
         },
 
-        /**
-         * Delete lot
-         */
+        
         async deleteLot(lot) {
             if (lot.occupied_spots > 0) {
                 if (window.utils?.showError) {
@@ -685,7 +677,7 @@ window.AdminParkingLotsComponent = {
             try {
                 await window.api.deleteParkingLot(lot.id);
                 
-                // Remove from local arrays
+                
                 this.parkingLots = this.parkingLots.filter(l => l.id !== lot.id);
                 this.filteredLots = this.filteredLots.filter(l => l.id !== lot.id);
                 this.updateStatistics();
@@ -701,9 +693,8 @@ window.AdminParkingLotsComponent = {
             }
         },
 
-        /**
-         * Save lot (create or update)
-         */
+        
+
         async saveLot() {
             if (!this.validateLot()) return;
 
@@ -711,10 +702,10 @@ window.AdminParkingLotsComponent = {
 
             try {
                 if (this.currentLot.id) {
-                    // Update existing lot
+                    
                     const response = await window.api.updateParkingLot(this.currentLot.id, this.currentLot);
                     
-                    // Update in local array
+                  
                     const index = this.parkingLots.findIndex(l => l.id === this.currentLot.id);
                     if (index !== -1) {
                         this.parkingLots[index] = response.parking_lot;
@@ -724,10 +715,10 @@ window.AdminParkingLotsComponent = {
                         window.utils.showSuccess('Parking lot updated successfully');
                     }
                 } else {
-                    // Create new lot
+                  
                     const response = await window.api.createParkingLot(this.currentLot);
                     
-                    // Add to local array
+                  
                     this.parkingLots.push(response.parking_lot);
                     
                     if (window.utils?.showSuccess) {
@@ -801,9 +792,7 @@ window.AdminParkingLotsComponent = {
             this.errors = {};
         },
 
-        /**
-         * Get empty lot object
-         */
+       
         getEmptyLot() {
             return {
                 id: null,
@@ -816,9 +805,7 @@ window.AdminParkingLotsComponent = {
             };
         },
 
-        /**
-         * Get occupancy color class
-         */
+        
         getOccupancyColor(rate) {
             if (rate >= 90) return 'bg-danger';
             if (rate >= 70) return 'bg-warning';
@@ -826,9 +813,7 @@ window.AdminParkingLotsComponent = {
             return 'bg-success';
         },
 
-        /**
-         * Get spot status text
-         */
+       
         getSpotStatus(spot) {
             if (!spot.is_active) return 'Inactive';
             if (spot.is_occupied) return 'Occupied';

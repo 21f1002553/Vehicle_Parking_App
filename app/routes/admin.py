@@ -11,7 +11,6 @@ from app.models.reservation import Reservation
 admin_bp = Blueprint('admin', __name__)
 
 def require_admin():
-    """Helper function to get current user and verify admin privileges"""
     user_id = get_jwt_identity()
     user = User.query.get(int(user_id))
     
@@ -29,13 +28,12 @@ def require_admin():
 @admin_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
 def admin_dashboard():
-    """Get admin dashboard with system overview"""
     try:
         admin, error_response, status_code = require_admin()
         if error_response:
             return error_response, status_code
         
-        # Get system statistics
+        # Statistics
         total_users = User.query.filter_by(is_admin=False).count()
         total_lots = ParkingLot.query.filter_by(is_active=True).count()
         total_spots = ParkingSpot.query.filter_by(is_active=True).count()
@@ -43,12 +41,12 @@ def admin_dashboard():
         total_reservations = Reservation.query.count()
         active_reservations = Reservation.query.filter_by(status='active').count()
         
-        # Get recent reservations
+        
         recent_reservations = Reservation.query.order_by(
             Reservation.created_at.desc()
         ).limit(10).all()
         
-        # Calculate total revenue
+        # Revenue
         completed_reservations = Reservation.query.filter_by(status='completed').all()
         total_revenue = sum(res.total_cost for res in completed_reservations if res.total_cost)
         
@@ -74,7 +72,6 @@ def admin_dashboard():
 @admin_bp.route('/parking-lots', methods=['GET'])
 @jwt_required()
 def get_all_parking_lots():
-    """Get all parking lots with detailed information"""
     try:
         admin, error_response, status_code = require_admin()
         if error_response:
@@ -85,7 +82,6 @@ def get_all_parking_lots():
         lots_data = []
         for lot in lots:
             lot_dict = lot.to_dict()
-            # Add detailed spot statistics
             total_spots = len(lot.parking_spots)
             active_spots = len([s for s in lot.parking_spots if s.is_active])
             occupied_spots = len([s for s in lot.parking_spots if s.is_occupied and s.is_active])
@@ -94,7 +90,7 @@ def get_all_parking_lots():
                 'total_spots_actual': total_spots,
                 'active_spots': active_spots,
                 'occupied_spots_actual': occupied_spots,
-                'revenue_today': 0,  # TODO: Calculate daily revenue
+                'revenue_today': 0,  
                 'spot_details': [spot.to_dict() for spot in lot.parking_spots]
             })
             lots_data.append(lot_dict)
@@ -110,7 +106,7 @@ def get_all_parking_lots():
 @admin_bp.route('/parking-lots', methods=['POST'])
 @jwt_required()
 def create_parking_lot():
-    """Create a new parking lot with auto-generated spots"""
+
     try:
         admin, error_response, status_code = require_admin()
         if error_response:
@@ -125,12 +121,10 @@ def create_parking_lot():
             if not data.get(field):
                 return jsonify({'error': f'{field} is required'}), 400
         
-        # Check if parking lot name already exists
         existing_lot = ParkingLot.query.filter_by(name=data['name']).first()
         if existing_lot:
             return jsonify({'error': 'Parking lot with this name already exists'}), 400
         
-        # Create parking lot
         parking_lot = ParkingLot(
             name=data['name'],
             address=data['address'],
@@ -142,14 +136,13 @@ def create_parking_lot():
         db.session.add(parking_lot)
         db.session.commit()
         
-        # Auto-generate parking spots
-        spot_prefix = parking_lot.name[0].upper()  # First letter of name
+        spot_prefix = parking_lot.name[0].upper() 
         spots_created = []
         
         for i in range(1, parking_lot.total_spots + 1):
             spot = ParkingSpot(
                 lot_id=parking_lot.id,
-                spot_number=f"{spot_prefix}{i:03d}"  # e.g., M001, M002
+                spot_number=f"{spot_prefix}{i:03d}"  
             )
             db.session.add(spot)
             spots_created.append(spot.spot_number)
@@ -170,7 +163,6 @@ def create_parking_lot():
 @admin_bp.route('/parking-lots/<int:lot_id>', methods=['PUT'])
 @jwt_required()
 def update_parking_lot(lot_id):
-    """Update an existing parking lot"""
     try:
         admin, error_response, status_code = require_admin()
         if error_response:
@@ -184,7 +176,6 @@ def update_parking_lot(lot_id):
         if not data:
             return jsonify({'error': 'No data provided'}), 400
         
-        # Update allowed fields
         updateable_fields = ['name', 'address', 'pin_code', 'price_per_hour', 'is_active']
         updated_fields = []
         
@@ -209,7 +200,6 @@ def update_parking_lot(lot_id):
 @admin_bp.route('/parking-lots/<int:lot_id>', methods=['DELETE'])
 @jwt_required()
 def delete_parking_lot(lot_id):
-    """Delete a parking lot (only if all spots are empty)"""
     try:
         admin, error_response, status_code = require_admin()
         if error_response:
@@ -219,7 +209,6 @@ def delete_parking_lot(lot_id):
         if not lot:
             return jsonify({'error': 'Parking lot not found'}), 404
         
-        # Check if any spots are occupied
         occupied_spots = ParkingSpot.query.filter_by(
             lot_id=lot_id, 
             is_occupied=True
@@ -230,10 +219,10 @@ def delete_parking_lot(lot_id):
                 'error': f'Cannot delete parking lot. {occupied_spots} spots are currently occupied.'
             }), 400
         
-        # Delete all spots first (cascade should handle this, but being explicit)
+    
         ParkingSpot.query.filter_by(lot_id=lot_id).delete()
         
-        # Delete the parking lot
+        
         db.session.delete(lot)
         db.session.commit()
         
@@ -329,14 +318,14 @@ def get_all_reservations():
         if error_response:
             return error_response, status_code
         
-        # Get query parameters for filtering
+        
         status = request.args.get('status')  # active, completed, reserved
         lot_id = request.args.get('lot_id', type=int)
         user_id = request.args.get('user_id', type=int)
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
         
-        # Build query
+        
         query = Reservation.query
         
         if status:
@@ -346,7 +335,7 @@ def get_all_reservations():
         if user_id:
             query = query.filter_by(user_id=user_id)
         
-        # Paginate results
+        
         reservations = query.order_by(Reservation.created_at.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
@@ -380,7 +369,7 @@ def get_detailed_reservations():
         if error_response:
             return error_response, status_code
         
-        # Get query parameters
+        #parameters
         status = request.args.get('status')
         lot_id = request.args.get('lot_id', type=int)
         user_id = request.args.get('user_id', type=int)
@@ -389,10 +378,10 @@ def get_detailed_reservations():
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
         
-        # Build query with joins for better performance
+       
         query = db.session.query(Reservation).join(User).join(ParkingSpot).join(ParkingLot)
         
-        # Apply filters
+    
         if status:
             query = query.filter(Reservation.status == status)
         if lot_id:
@@ -400,7 +389,7 @@ def get_detailed_reservations():
         if user_id:
             query = query.filter(Reservation.user_id == user_id)
         
-        # Date range filtering
+       
         if date_from:
             try:
                 date_from_obj = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
@@ -415,12 +404,12 @@ def get_detailed_reservations():
             except ValueError:
                 return jsonify({'error': 'Invalid date_to format. Use ISO format.'}), 400
         
-        # Paginate results
+      
         reservations_paginated = query.order_by(desc(Reservation.created_at)).paginate(
             page=page, per_page=per_page, error_out=False
         )
         
-        # Build detailed reservation data
+        # Reservation data
         detailed_reservations = []
         for res in reservations_paginated.items:
             user = User.query.get(res.user_id)
@@ -475,17 +464,17 @@ def revenue_analytics():
         if error_response:
             return error_response, status_code
         
-        # Get time period (default: last 30 days)
+        #last 30 days)
         days = request.args.get('days', 30, type=int)
         start_date = datetime.utcnow() - timedelta(days=days)
         
-        # Get completed reservations in the period
+       
         reservations = Reservation.query.filter(
             Reservation.status == 'completed',
             Reservation.parking_end_time >= start_date
         ).all()
         
-        # Calculate revenue analytics
+        # revenue
         analytics = {
             'period': f'Last {days} days',
             'start_date': start_date.isoformat(),
@@ -502,14 +491,14 @@ def revenue_analytics():
         }
         
         if reservations:
-            # Calculate totals
+            
             total_revenue = sum(res.total_cost for res in reservations if res.total_cost)
             analytics['total_revenue'] = round(total_revenue, 2)
             
             if len(reservations) > 0:
                 analytics['average_revenue_per_session'] = round(total_revenue / len(reservations), 2)
             
-            # Total hours sold
+        
             total_hours = 0
             for res in reservations:
                 if res.parking_start_time and res.parking_end_time:
@@ -519,7 +508,7 @@ def revenue_analytics():
             
             analytics['total_hours_sold'] = round(total_hours, 2)
             
-            # Revenue by lot
+            # Revenuezzzzzz
             lot_revenue = {}
             lot_sessions = {}
             for res in reservations:
@@ -542,7 +531,7 @@ def revenue_analytics():
                     'average_per_session': round(lot_revenue[lot_name] / lot_sessions[lot_name], 2) if lot_sessions[lot_name] > 0 else 0
                 }
             
-            # Revenue by day
+            # Revenuezzzzz
             daily_revenue = {}
             for res in reservations:
                 if res.parking_end_time:
@@ -554,7 +543,7 @@ def revenue_analytics():
             
             analytics['revenue_by_day'] = daily_revenue
             
-            # Top users by revenue
+            # Top userzzzzzz
             user_revenue = {}
             for res in reservations:
                 user_id = res.user_id
@@ -563,7 +552,6 @@ def revenue_analytics():
                 user_revenue[user_id]['revenue'] += res.total_cost or 0
                 user_revenue[user_id]['sessions'] += 1
             
-            # Get top 5 users
             top_user_ids = sorted(user_revenue.keys(), key=lambda x: user_revenue[x]['revenue'], reverse=True)[:5]
             for user_id in top_user_ids:
                 user = User.query.get(user_id)
@@ -576,7 +564,6 @@ def revenue_analytics():
                         'total_sessions': user_revenue[user_id]['sessions']
                     })
             
-            # Peak hours analysis
             hour_usage = {}
             for res in reservations:
                 if res.parking_start_time:
@@ -596,13 +583,13 @@ def revenue_analytics():
 @admin_bp.route('/analytics/occupancy', methods=['GET'])
 @jwt_required()
 def occupancy_analytics():
-    """Get occupancy and usage analytics"""
+   
     try:
         admin, error_response, status_code = require_admin()
         if error_response:
             return error_response, status_code
         
-        # Current system status
+        # Current system statuzzzz
         total_spots = ParkingSpot.query.filter_by(is_active=True).count()
         occupied_spots = ParkingSpot.query.filter_by(is_occupied=True, is_active=True).count()
         available_spots = total_spots - occupied_spots
@@ -628,7 +615,7 @@ def occupancy_analytics():
                 'price_per_hour': lot.price_per_hour
             })
         
-        # Historical occupancy (last 7 days)
+        #last 7 days
         days_back = 7
         historical_data = []
         
@@ -637,7 +624,7 @@ def occupancy_analytics():
             day_start = date.replace(hour=0, minute=0, second=0, microsecond=0)
             day_end = day_start + timedelta(days=1)
             
-            # Count active sessions for that day
+            
             active_sessions = Reservation.query.filter(
                 Reservation.parking_start_time <= day_end,
                 Reservation.parking_end_time >= day_start,
@@ -657,7 +644,8 @@ def occupancy_analytics():
                 'system_occupancy_rate': round((occupied_spots / total_spots * 100), 2) if total_spots > 0 else 0
             },
             'lot_breakdown': lot_occupancy,
-            'historical_occupancy': list(reversed(historical_data)),  # Most recent first
+            'historical_occupancy': list(reversed(historical_data)),  
+
             'efficiency_metrics': {
                 'average_occupancy_rate': round(sum(lot['occupancy_rate'] for lot in lot_occupancy) / len(lot_occupancy), 2) if lot_occupancy else 0,
                 'highest_occupancy_lot': max(lot_occupancy, key=lambda x: x['occupancy_rate']) if lot_occupancy else None,
@@ -670,30 +658,28 @@ def occupancy_analytics():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ============================================================================
-# MILESTONE 6: ADVANCED CHARTS & ANALYTICS ENDPOINTS
-# ============================================================================
+# 
 
 @admin_bp.route('/analytics/charts/dashboard', methods=['GET'])
 @jwt_required()
 def get_dashboard_charts():
-    """Get comprehensive dashboard charts data for Chart.js"""
+    
     try:
         admin, error_response, status_code = require_admin()
         if error_response:
             return error_response, status_code
         
-        # Get time period (default: last 30 days)
+       
         days = request.args.get('days', 30, type=int)
         start_date = datetime.utcnow() - timedelta(days=days)
         
-        # Get all completed reservations in the period
+    
         reservations = Reservation.query.filter(
             Reservation.status == 'completed',
             Reservation.parking_end_time >= start_date
         ).all()
         
-        # 1. Revenue Over Time Chart (Line Chart)
+        #Revenue Over Timezzzz
         revenue_by_day = {}
         sessions_by_day = {}
         for res in reservations:
@@ -702,7 +688,7 @@ def get_dashboard_charts():
                 revenue_by_day[date_key] = revenue_by_day.get(date_key, 0) + (res.total_cost or 0)
                 sessions_by_day[date_key] = sessions_by_day.get(date_key, 0) + 1
         
-        # Fill missing dates with 0
+      
         current_date = start_date
         while current_date <= datetime.utcnow():
             date_key = current_date.strftime('%Y-%m-%d')
@@ -711,10 +697,10 @@ def get_dashboard_charts():
                 sessions_by_day[date_key] = 0
             current_date += timedelta(days=1)
         
-        # Sort by date and prepare for Chart.js
+ 
         sorted_revenue = sorted(revenue_by_day.items())
         
-        # 2. Parking Lot Performance (Bar Chart)
+        #Parking Lot Performance
         lot_performance = {}
         for res in reservations:
             spot = ParkingSpot.query.get(res.spot_id)
@@ -738,14 +724,14 @@ def get_dashboard_charts():
                         hours = duration.total_seconds() / 3600
                         lot_performance[lot_name]['total_hours'] += hours
         
-        # Calculate average duration for each lot
+        # Average duration
         for lot_name in lot_performance:
             if lot_performance[lot_name]['sessions'] > 0:
                 lot_performance[lot_name]['avg_duration'] = round(
                     lot_performance[lot_name]['total_hours'] / lot_performance[lot_name]['sessions'], 2
                 )
         
-        # 3. Hourly Usage Pattern (Line Chart)
+        # Hourly Usage 
         hourly_usage = {}
         for hour in range(24):
             hourly_usage[hour] = {'sessions': 0, 'revenue': 0}
@@ -756,7 +742,7 @@ def get_dashboard_charts():
                 hourly_usage[hour]['sessions'] += 1
                 hourly_usage[hour]['revenue'] += res.total_cost or 0
         
-        # 4. User Activity Distribution (Doughnut Chart)
+        #User Activity Distribution
         user_activity = {}
         for res in reservations:
             user = User.query.get(res.user_id)
@@ -764,7 +750,7 @@ def get_dashboard_charts():
                 user_key = f"{user.username}"
                 user_activity[user_key] = user_activity.get(user_key, 0) + (res.total_cost or 0)
         
-        # Get top 5 users and group others
+        
         sorted_users = sorted(user_activity.items(), key=lambda x: x[1], reverse=True)
         top_users = sorted_users[:5]
         others_revenue = sum(revenue for _, revenue in sorted_users[5:])
@@ -773,7 +759,7 @@ def get_dashboard_charts():
         if others_revenue > 0:
             user_chart_data['Others'] = others_revenue
         
-        # 5. Monthly Comparison (Bar Chart - last 12 months)
+        #Monthly Comparisonzzzz
         monthly_data = {}
         for i in range(12):
             month_start = datetime.utcnow().replace(day=1) - timedelta(days=30 * i)
@@ -787,9 +773,11 @@ def get_dashboard_charts():
                     monthly_data[month_key]['revenue'] += res.total_cost or 0
                     monthly_data[month_key]['sessions'] += 1
         
-        # 6. Occupancy Trends (Area Chart)
+
+
+        # Occupancy Trends
         occupancy_trends = []
-        for i in range(30):  # Last 30 days
+        for i in range(30):
             date = datetime.utcnow() - timedelta(days=i)
             day_start = date.replace(hour=0, minute=0, second=0, microsecond=0)
             day_end = day_start + timedelta(days=1)
@@ -802,10 +790,10 @@ def get_dashboard_charts():
             occupancy_trends.append({
                 'date': day_start.strftime('%Y-%m-%d'),
                 'sessions': daily_sessions,
-                'occupancy_rate': min((daily_sessions / 10) * 100, 100)  # Normalize to percentage
+                'occupancy_rate': min((daily_sessions / 10) * 100, 100)  
             })
         
-        # Prepare Chart.js formatted data
+      
         charts_data = {
             'revenue_timeline': {
                 'type': 'line',
@@ -915,12 +903,12 @@ def get_dashboard_charts():
             }
         }
         
-        # Summary statistics for dashboard cards
+        # Summary statistics
         total_revenue = sum(res.total_cost for res in reservations if res.total_cost)
         total_sessions = len(reservations)
         avg_session_value = round(total_revenue / total_sessions, 2) if total_sessions > 0 else 0
         
-        # Peak hour
+        
         peak_hour = max(hourly_usage, key=lambda x: hourly_usage[x]['sessions'])
         
         # Most profitable lot
@@ -1010,10 +998,11 @@ def get_revenue_breakdown_charts():
                     
                     if res.parking_start_time and res.parking_end_time:
                         duration = res.parking_end_time - res.parking_start_time
-                        hours = max(duration.total_seconds() / 3600, 1)  # Minimum 1 hour
+                        hours = max(duration.total_seconds() / 3600, 1) 
                         lot_hourly_revenue[lot.name]['total_hours'] += hours
         
-        # Calculate average hourly rates
+     
+
         for lot_name in lot_hourly_revenue:
             if lot_hourly_revenue[lot_name]['total_hours'] > 0:
                 avg_rate = lot_hourly_revenue[lot_name]['total_revenue'] / lot_hourly_revenue[lot_name]['total_hours']
@@ -1096,17 +1085,17 @@ def force_release_spot(spot_id):
         if not spot.is_occupied:
             return jsonify({'error': 'Spot is not currently occupied'}), 400
         
-        # Find active reservation for this spot
+        # Active reservation
         active_reservation = Reservation.query.filter_by(
             spot_id=spot_id,
             status='active'
         ).first()
         
         if active_reservation:
-            # End the reservation
+            
             active_reservation.end_parking()
             
-        # Release the spot
+        
         spot.release_spot()
         
         db.session.commit()
@@ -1145,7 +1134,7 @@ def test_admin_routes():
         ]
     }), 200
 
-# Helper functions for admin analytics
+
 def calculate_admin_cost_breakdown(reservation):
     """Calculate detailed cost breakdown for admin view"""
     if not reservation.parking_start_time or not reservation.parking_end_time:
@@ -1188,10 +1177,10 @@ def get_session_status(reservation):
             'color': 'green'
         }
     elif reservation.status == 'active':
-        # Check if it's been active for a long time
+      
         if reservation.parking_start_time:
             duration = datetime.utcnow() - reservation.parking_start_time
-            if duration.total_seconds() > 24 * 3600:  # More than 24 hours
+            if duration.total_seconds() > 24 * 3600:  
                 return {
                     'status': 'active_long',
                     'description': f'Active for {duration.days} days - may need attention',
@@ -1203,10 +1192,10 @@ def get_session_status(reservation):
             'color': 'blue'
         }
     elif reservation.status == 'reserved':
-        # Check if reservation is old
+    
         if reservation.reservation_time:
             duration = datetime.utcnow() - reservation.reservation_time
-            if duration.total_seconds() > 2 * 3600:  # More than 2 hours
+            if duration.total_seconds() > 2 * 3600:  
                 return {
                     'status': 'reserved_stale',
                     'description': 'Reserved but not occupied - may be abandoned',

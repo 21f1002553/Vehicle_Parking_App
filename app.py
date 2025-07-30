@@ -34,7 +34,7 @@ def create_app():
     CORS(app, resources={r"/api/*": {"origins": "*"}}, 
          methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
          allow_headers=['Content-Type', 'Authorization'])
-    print("✅ Extensions initialized")
+  
     
     # Register blueprints for API routes
     register_blueprints(app)
@@ -42,18 +42,14 @@ def create_app():
     # Register frontend routes
     register_frontend_routes(app)
     
-    print("✅ All routes registered")
-    print(f"📊 Total routes: {len(app.url_map._rules)}")
+  
     
-    # Debug: Print folder paths to confirm they're correct
-    print(f"📁 Template folder: {app.template_folder}")
-    print(f"📁 Static folder: {app.static_folder}")
+   
     
     return app
 
 def register_blueprints(app):
     """Register all API blueprints"""
-    print("📋 Registering API blueprints...")
     
     # Import blueprints
     from app.routes.auth import auth_bp
@@ -65,11 +61,9 @@ def register_blueprints(app):
     app.register_blueprint(user_bp, url_prefix='/api/user')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     
-    print("✅ API Blueprints registered")
+   
 
 def register_frontend_routes(app):
-    """Register frontend routes for the Vue.js SPA - FIXED VERSION"""
-    print("🌐 Registering frontend routes...")
     
     @app.route('/')
     def index():
@@ -79,13 +73,7 @@ def register_frontend_routes(app):
     @app.route('/api-test')
     def api_test():
         return render_template('api_test.html')
-    
-    # REMOVED PROBLEMATIC ROUTES - These were causing static file conflicts:
-    # @app.route('/login')
-    # @app.route('/register') 
-    # @app.route('/user/<path:path>')
-    # @app.route('/admin/<path:path>')
-    # Vue Router will handle all client-side routing instead
+ 
     
     # API health check endpoint
     @app.route('/api/health')
@@ -153,7 +141,7 @@ def register_frontend_routes(app):
             }
         })
     
-    print("✅ Frontend routes registered")
+
 
 def init_database(app):
     """Initialize database with tables and sample data"""
@@ -167,7 +155,7 @@ def init_database(app):
             
             # Create all tables
             db.create_all()
-            print("✅ All database tables created!")
+            
             
             # Create admin user if doesn't exist
             admin = User.query.filter_by(email='admin@parking.com').first()
@@ -183,7 +171,7 @@ def init_database(app):
                     is_admin=True
                 )
                 db.session.add(admin)
-                print("✅ Admin user created!")
+               
             
             # Create test user if doesn't exist
             test_user = User.query.filter_by(email='user@test.com').first()
@@ -199,7 +187,7 @@ def init_database(app):
                     is_admin=False
                 )
                 db.session.add(test_user)
-                print("✅ Test user created!")
+              
             
             # Create sample parking lots with Indian locations
             sample_lots = [
@@ -261,10 +249,9 @@ def init_database(app):
                         )
                         db.session.add(spot)
                     
-                    print(f"✅ Created {lot_data['name']} with {lot_data['total_spots']} spots!")
+                   
             
-            db.session.commit()
-            print("✅ Database initialization complete!")
+          
             
         except Exception as e:
             print(f"⚠️  Database initialization error: {e}")
@@ -276,7 +263,7 @@ app = create_app()
 # FIXED Error handlers - This was the main problem!
 @app.errorhandler(404)
 def not_found(error):
-    """Handle 404 errors - FIXED to properly handle static files"""
+    """Handle 404 errors - """
     # For API endpoints, return JSON 404
     if request.path.startswith('/api/'):
         return jsonify({'error': 'API endpoint not found'}), 404
@@ -309,37 +296,14 @@ def inject_config():
     }
 
 if __name__ == '__main__':
-    print("🔄 Initializing Vehicle Parking App with Frontend...")
     
     # Initialize database
     init_database(app)
     
-    print("\n" + "="*60)
-    print("🚀 VEHICLE PARKING SYSTEM - READY TO LAUNCH!")
-    print("="*60)
-    print("🌐 Frontend Access:")
+    
+    print("VEHICLE PARKING SYSTEM")
     print("   Main App:        http://localhost:5000")
-    print("   (All routes handled by Vue Router)")
-    print("")
     print("🔐 Demo Credentials:")
     print("   Admin:   admin@parking.com / admin123")
     print("   User:    user@test.com / user123")
-    print("")
-    print("🔌 API Endpoints:")
-    print("   Health Check:    http://localhost:5000/api/health")
-    print("   API Info:        http://localhost:5000/api")
-    print("   Auth Test:       http://localhost:5000/api/auth/test")
-    print("   User Test:       http://localhost:5000/api/user/test")
-    print("   Admin Test:      http://localhost:5000/api/admin/test")
-    print("")
-    print("🐛 Debug Info:")
-    print("   Debug Endpoint:  http://localhost:5000/debug")
-    print("")
-    print("🎯 Next Steps:")
-    print("   1. Open http://localhost:5000 in your browser")
-    print("   2. Vue Router will handle all navigation")
-    print("   3. Use demo credentials to test authentication")
-    print("   4. Static files should now load correctly!")
-    print("="*60)
-    
     app.run(debug=True, host='0.0.0.0', port=5000)

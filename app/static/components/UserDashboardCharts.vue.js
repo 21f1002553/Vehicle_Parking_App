@@ -1,9 +1,5 @@
-/**
- * UserDashboardCharts.vue.js - User Dashboard Charts Component
- * Displays personal parking analytics and statistics
- */
 
-window.UserDashboardCharts = {
+window.UserDashboardChartsComponent = {
     name: 'UserDashboardCharts',
     template: `
     <div class="container-fluid">
@@ -243,7 +239,7 @@ window.UserDashboardCharts = {
     },
 
     beforeUnmount() {
-        // Destroy all charts to prevent memory leaks
+        
         Object.values(this.charts).forEach(chart => {
             if (chart) chart.destroy();
         });
@@ -281,7 +277,7 @@ window.UserDashboardCharts = {
                 console.error('Error loading charts:', error);
                 this.error = 'Failed to load your analytics data. Please try again.';
                 
-                // Load demo data as fallback
+               
                 this.loadDemoData();
             } finally {
                 this.loading = false;
@@ -289,7 +285,7 @@ window.UserDashboardCharts = {
         },
 
         loadDemoData() {
-            // Demo data for testing
+            
             this.summary = {
                 total_spent: 1250,
                 total_sessions: 15,
@@ -307,21 +303,21 @@ window.UserDashboardCharts = {
         },
 
         createAllCharts() {
-            // Destroy existing charts
+           
             Object.values(this.charts).forEach(chart => {
                 if (chart) chart.destroy();
             });
             this.charts = {};
 
             try {
-                // Check if Chart.js is available
+           
                 if (typeof Chart === 'undefined') {
                     console.error('Chart.js is not loaded');
                     this.error = 'Chart library not loaded. Please refresh the page.';
                     return;
                 }
 
-                // Create charts only if we have data
+              
                 if (this.chartsData.spending_timeline && this.$refs.spendingChart) {
                     this.createSpendingChart();
                 }

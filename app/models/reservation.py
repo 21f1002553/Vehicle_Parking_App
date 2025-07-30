@@ -24,43 +24,37 @@ class Reservation(db.Model):
     user = db.relationship('User', backref='reservations', lazy=True)
     
     def start_parking(self):
-        """Start parking session"""
         self.status = 'active'
         self.parking_start_time = datetime.utcnow()
         self.updated_at = datetime.utcnow()
     
     def end_parking(self):
-        """End parking session with cost calculation"""
         if self.parking_start_time:
             self.parking_end_time = datetime.utcnow()
             self.status = 'completed'
             self.updated_at = datetime.utcnow()
             
-            # Calculate cost
+            # Cost
             duration = self.parking_end_time - self.parking_start_time
-            hours = max(duration.total_seconds() / 3600, 1)  # Minimum 1 hour
+            hours = max(duration.total_seconds() / 3600, 1)  
             self.total_cost = round(hours * self.hourly_rate, 2)
     
     def get_duration_hours(self):
-        """Calculate duration in hours"""
         if not self.parking_start_time or not self.parking_end_time:
             return 0.0
         duration = self.parking_end_time - self.parking_start_time
         return round(duration.total_seconds() / 3600, 2)
     
     def get_duration_minutes(self):
-        """Calculate duration in minutes"""
         if not self.parking_start_time or not self.parking_end_time:
             return 0
         duration = self.parking_end_time - self.parking_start_time
         return int(duration.total_seconds() / 60)
     
     def get_base_cost(self):
-        """Get base hourly rate"""
         return self.hourly_rate
     
     def format_duration(self):
-        """Format duration in human-readable format"""
         if not self.parking_start_time or not self.parking_end_time:
             return "N/A"
         
@@ -74,7 +68,6 @@ class Reservation(db.Model):
             return f"{minutes}m"
     
     def get_cost_breakdown(self):
-        """Get detailed cost breakdown for display"""
         if self.status != 'completed':
             return {
                 'status': self.status,
@@ -110,7 +103,6 @@ class Reservation(db.Model):
         }
     
     def get_admin_summary(self):
-        """Get summary for admin view"""
         return {
             'id': self.id,
             'user_id': self.user_id,
@@ -126,7 +118,6 @@ class Reservation(db.Model):
         }
     
     def to_dict(self):
-        """Enhanced to_dict with calculated cost breakdown"""
         base_dict = {
             'id': self.id,
             'user_id': self.user_id,
@@ -143,7 +134,7 @@ class Reservation(db.Model):
             'duration_minutes': self.get_duration_minutes()
         }
         
-        # Add cost breakdown for completed reservations
+        # Cost breakdown
         if self.status == 'completed':
             base_dict['cost_breakdown'] = self.get_cost_breakdown()
         

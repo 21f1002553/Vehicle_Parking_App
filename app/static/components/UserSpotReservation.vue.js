@@ -1,7 +1,4 @@
-/**
- * UserSpotReservation.vue.js - User Spot Reservation System Component
- * Complete parking spot reservation and management for users
- */
+
 
 window.UserSpotReservationComponent = {
     name: 'UserSpotReservation',

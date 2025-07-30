@@ -1,9 +1,8 @@
 /**
- * AdminDashboardCharts.vue.js - Admin Dashboard Charts Component
- * Displays comprehensive analytics for admin users
+Admin Dashboard Charts Component
  */
 
-window.AdminDashboardCharts = {
+window.AdminDashboardChartsComponent = {
     name: 'AdminDashboardCharts',
     template: `
     <div class="container-fluid">
@@ -284,7 +283,7 @@ window.AdminDashboardCharts = {
     },
   
     beforeUnmount() {
-        // Destroy all charts to prevent memory leaks
+        
         Object.values(this.charts).forEach(chart => {
             if (chart) chart.destroy();
         });
@@ -313,11 +312,11 @@ window.AdminDashboardCharts = {
                 this.summary = data.summary || {};
                 this.period = data.period || `Last ${this.selectedPeriod} days`;
   
-                // Load additional data
+              
                 await this.loadSystemStats();
                 await this.loadTopLots();
   
-                // Wait for DOM update then create charts
+                
                 this.$nextTick(() => {
                     this.createAllCharts();
                 });
@@ -326,7 +325,7 @@ window.AdminDashboardCharts = {
                 console.error('Error loading charts:', error);
                 this.error = 'Failed to load analytics data. Please try again.';
                 
-                // Load demo data as fallback
+             
                 this.loadDemoData();
             } finally {
                 this.loading = false;
@@ -359,8 +358,7 @@ window.AdminDashboardCharts = {
         },
   
         async loadTopLots() {
-            // This would normally come from the API
-            // For now, use demo data
+            
             this.topLots = [
                 { name: 'Downtown Mall', revenue: 15000, sessions: 150, occupancy: 85 },
                 { name: 'Airport Parking', revenue: 12000, sessions: 80, occupancy: 70 },

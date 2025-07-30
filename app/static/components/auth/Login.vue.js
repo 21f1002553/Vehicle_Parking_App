@@ -1,6 +1,6 @@
 /**
- * Login.vue.js - Login Component
- * Handles user authentication with email and password
+Login Component
+ 
  */
 
 window.LoginComponent = {
@@ -196,9 +196,7 @@ window.LoginComponent = {
     },
 
     methods: {
-        /**
-         * Handle login form submission
-         */
+        
         async handleLogin() {
             if (!this.isFormValid || this.loading) return;
 
@@ -269,9 +267,7 @@ window.LoginComponent = {
             }
         },
 
-        /**
-         * Get user-friendly error message
-         */
+        
         getErrorMessage(error) {
             if (error.message.includes('Invalid credentials')) {
                 return 'Invalid email or password. Please check your credentials and try again.';
@@ -284,7 +280,7 @@ window.LoginComponent = {
         },
 
         /**
-         * Validate individual form field
+         * Validate individual form 
          */
         validateField(field) {
             this.errors = { ...this.errors };
@@ -310,7 +306,7 @@ window.LoginComponent = {
         },
 
         /**
-         * Get CSS classes for form field
+         * Get CSS classes 
          */
         getFieldClass(field) {
             const baseClass = 'form-control';
@@ -322,15 +318,13 @@ window.LoginComponent = {
             return baseClass;
         },
 
-        /**
-         * Toggle password visibility
-         */
+        
         togglePassword() {
             this.showPassword = !this.showPassword;
         },
 
         /**
-         * Fill demo credentials
+         * Ddemo credentials
          */
         fillDemoCredentials(type) {
             if (type === 'admin') {
@@ -341,13 +335,13 @@ window.LoginComponent = {
                 this.form.password = 'user123';
             }
             
-            // Clear any existing errors
+        
             this.errors = {};
             this.errorMessage = null;
         },
 
         /**
-         * Reset form to initial state
+         * Reset form 
          */
         resetForm() {
             this.form = {
@@ -360,7 +354,7 @@ window.LoginComponent = {
         },
 
         /**
-         * Check if user already has valid auth
+         * Check valid auth
          */
         async checkExistingAuth() {
             try {

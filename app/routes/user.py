@@ -11,7 +11,7 @@ from app.models.reservation import Reservation
 user_bp = Blueprint('user', __name__)
 
 def require_user():
-    """Helper function to get current user and verify they're not admin"""
+   
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
     
@@ -23,6 +23,7 @@ def require_user():
     
     return user, None, None
 
+
 @user_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
 def dashboard():
@@ -32,18 +33,19 @@ def dashboard():
         if error_response:
             return error_response, status_code
         
-        # Get user's active reservations
+        
         active_reservations = Reservation.query.filter_by(
             user_id=user.id, 
             status='active'
         ).all()
         
-        # Get user's recent reservation history
+       
         recent_reservations = Reservation.query.filter_by(
             user_id=user.id
         ).order_by(Reservation.created_at.desc()).limit(5).all()
         
-        # Get available parking lots
+        
+
         available_lots = ParkingLot.query.filter_by(is_active=True).all()
         
         return jsonify({
@@ -103,7 +105,7 @@ def reserve_spot():
         if not lot_id or not vehicle_number:
             return jsonify({'error': 'lot_id and vehicle_number are required'}), 400
         
-        # Check if user has active reservation
+        
         active_reservation = Reservation.query.filter_by(
             user_id=user.id, 
             status='active'
@@ -112,12 +114,12 @@ def reserve_spot():
         if active_reservation:
             return jsonify({'error': 'You already have an active reservation'}), 400
         
-        # Find parking lot
+        
         lot = ParkingLot.query.get(lot_id)
         if not lot or not lot.is_active:
             return jsonify({'error': 'Parking lot not found or inactive'}), 404
         
-        # Auto-allocate first available spot
+        
         available_spot = ParkingSpot.query.filter_by(
             lot_id=lot_id,
             is_occupied=False,
@@ -127,7 +129,10 @@ def reserve_spot():
         if not available_spot:
             return jsonify({'error': 'No available spots in this parking lot'}), 400
         
-        # Create reservation
+
+
+        
+        # reservation
         reservation = Reservation(
             user_id=user.id,
             spot_id=available_spot.id,
@@ -214,7 +219,7 @@ def release_spot(reservation_id):
         if not spot:
             return jsonify({'error': 'Parking spot not found'}), 404
         
-        # End parking
+     
         reservation.end_parking()
         spot.release_spot()
         
@@ -242,18 +247,18 @@ def parking_history():
         if error_response:
             return error_response, status_code
         
-        # Get pagination parameters
+        
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 10, type=int)
         
-        # Get user's reservations with pagination
+
         reservations = Reservation.query.filter_by(
             user_id=user.id
         ).order_by(Reservation.created_at.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
         
-        # Calculate total cost and statistics
+        # StatisticzZZZ
         all_reservations = Reservation.query.filter_by(user_id=user.id).all()
         total_cost = sum(res.total_cost for res in all_reservations if res.total_cost)
         total_sessions = len(all_reservations)
@@ -289,13 +294,13 @@ def detailed_parking_history():
         if error_response:
             return error_response, status_code
         
-        # Get pagination and filter parameters
+     
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 10, type=int)
-        status_filter = request.args.get('status')  # completed, active, reserved
+        status_filter = request.args.get('status')   
         lot_id = request.args.get('lot_id', type=int)
         
-        # Build query
+      
         query = Reservation.query.filter_by(user_id=user.id)
         
         if status_filter:
@@ -304,18 +309,18 @@ def detailed_parking_history():
         if lot_id:
             query = query.join(ParkingSpot).filter(ParkingSpot.lot_id == lot_id)
         
-        # Get paginated results with lot and spot details
+      
         reservations = query.order_by(desc(Reservation.created_at)).paginate(
             page=page, per_page=per_page, error_out=False
         )
         
-        # Enhanced reservation data with cost breakdown
+       
         detailed_reservations = []
         for res in reservations.items:
             spot = ParkingSpot.query.get(res.spot_id)
             lot = ParkingLot.query.get(spot.lot_id) if spot else None
             
-            # Calculate detailed cost breakdown
+            
             cost_breakdown = calculate_cost_breakdown(res)
             
             reservation_data = {
@@ -327,7 +332,7 @@ def detailed_parking_history():
             }
             detailed_reservations.append(reservation_data)
         
-        # Calculate comprehensive statistics
+     
         stats = calculate_user_statistics(user.id)
         
         return jsonify({
@@ -359,18 +364,18 @@ def cost_summary():
         if error_response:
             return error_response, status_code
         
-        # Get date range parameters
-        days = request.args.get('days', 30, type=int)  # Last 30 days by default
+     
+        days = request.args.get('days', 30, type=int)  
         start_date = datetime.utcnow() - timedelta(days=days)
         
-        # Get reservations in date range
+        
         reservations = Reservation.query.filter(
             Reservation.user_id == user.id,
             Reservation.created_at >= start_date,
             Reservation.status == 'completed'
         ).all()
         
-        # Calculate cost summary
+        #Cost summary
         cost_summary = {
             'period': f'Last {days} days',
             'start_date': start_date.isoformat(),
@@ -385,12 +390,12 @@ def cost_summary():
         }
         
         if reservations:
-            # Calculate averages
+            # AverageZzzzzzz
             valid_costs = [res.total_cost for res in reservations if res.total_cost]
             if valid_costs:
                 cost_summary['average_cost_per_session'] = round(sum(valid_costs) / len(valid_costs), 2)
             
-            # Calculate total hours
+            # Total hourszzz
             total_hours = 0
             for res in reservations:
                 if res.parking_start_time and res.parking_end_time:
@@ -403,7 +408,7 @@ def cost_summary():
             if total_hours > 0:
                 cost_summary['average_hourly_rate'] = round(cost_summary['total_cost'] / total_hours, 2)
             
-            # Cost breakdown by lot
+            # Cost by lot
             for res in reservations:
                 spot = ParkingSpot.query.get(res.spot_id)
                 if spot:
@@ -451,14 +456,14 @@ def get_active_reservation():
         if error_response:
             return error_response, status_code
         
-        # Find active reservation
+        
         active_reservation = Reservation.query.filter_by(
             user_id=user.id,
             status='active'
         ).first()
         
         if not active_reservation:
-            # Check for reserved status too
+         
             reserved_reservation = Reservation.query.filter_by(
                 user_id=user.id,
                 status='reserved'
@@ -474,7 +479,7 @@ def get_active_reservation():
             
             return jsonify({'message': 'No active reservation found'}), 404
         
-        # Get spot and lot details
+    
         spot = ParkingSpot.query.get(active_reservation.spot_id)
         lot = ParkingLot.query.get(spot.lot_id) if spot else None
         
@@ -488,9 +493,7 @@ def get_active_reservation():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ============================================================================
-# MILESTONE 6: USER CHARTS & ANALYTICS ENDPOINTS
-# ============================================================================
+
 
 @user_bp.route('/analytics/charts/personal', methods=['GET'])
 @jwt_required()
@@ -501,18 +504,18 @@ def get_personal_charts():
         if error_response:
             return error_response, status_code
         
-        # Get time period (default: last 90 days)
+       
         days = request.args.get('days', 90, type=int)
         start_date = datetime.utcnow() - timedelta(days=days)
         
-        # Get user's completed reservations in the period
+  
         reservations = Reservation.query.filter(
             Reservation.user_id == user.id,
             Reservation.status == 'completed',
             Reservation.parking_end_time >= start_date
         ).all()
         
-        # 1. Personal Spending Over Time (Line Chart)
+        # 1. Personal Spending Over Time 
         spending_by_day = {}
         sessions_by_day = {}
         for res in reservations:
@@ -521,7 +524,7 @@ def get_personal_charts():
                 spending_by_day[date_key] = spending_by_day.get(date_key, 0) + (res.total_cost or 0)
                 sessions_by_day[date_key] = sessions_by_day.get(date_key, 0) + 1
         
-        # Fill missing dates with 0
+      
         current_date = start_date
         while current_date <= datetime.utcnow():
             date_key = current_date.strftime('%Y-%m-%d')
@@ -530,10 +533,10 @@ def get_personal_charts():
                 sessions_by_day[date_key] = 0
             current_date += timedelta(days=1)
         
-        # Sort by date and prepare for Chart.js
+
         sorted_spending = sorted(spending_by_day.items())
         
-        # 2. Parking Lot Usage (Doughnut Chart)
+        # 2. Parking Lot Usage
         lot_usage = {}
         lot_spending = {}
         for res in reservations:
@@ -545,7 +548,7 @@ def get_personal_charts():
                     lot_usage[lot_name] = lot_usage.get(lot_name, 0) + 1
                     lot_spending[lot_name] = lot_spending.get(lot_name, 0) + (res.total_cost or 0)
         
-        # 3. Parking Duration Distribution (Bar Chart)
+        # 3. Parking Duration Distribution
         duration_brackets = {
             '0-1 hours': 0, '1-2 hours': 0, '2-4 hours': 0, 
             '4-8 hours': 0, '8+ hours': 0
@@ -567,7 +570,7 @@ def get_personal_charts():
                 else:
                     duration_brackets['8+ hours'] += 1
         
-        # 4. Weekly Pattern (Radar Chart)
+        # 4. Weekly Pattern
         weekday_usage = {i: 0 for i in range(7)}  # 0=Monday, 6=Sunday
         weekday_spending = {i: 0 for i in range(7)}
         
@@ -579,7 +582,7 @@ def get_personal_charts():
         
         weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
         
-        # 5. Monthly Spending Trend (Area Chart)
+        # 5. Monthly Spending Trend 
         monthly_spending = {}
         for i in range(6):  # Last 6 months
             month_start = datetime.utcnow().replace(day=1) - timedelta(days=30 * i)
@@ -602,7 +605,7 @@ def get_personal_charts():
                 hour = res.parking_start_time.hour
                 hourly_usage[hour] += 1
         
-        # Prepare Chart.js formatted data
+       
         charts_data = {
             'spending_timeline': {
                 'type': 'line',
@@ -700,12 +703,12 @@ def get_personal_charts():
             }
         }
         
-        # Personal summary statistics
-        total_spent = sum(res.total_cost for res in reservations if res.total_cost)
+        #statistics
+        total_spent = sum(res.total_cost for res in reservations)
         total_sessions = len(reservations)
         avg_session_cost = round(total_spent / total_sessions, 2) if total_sessions > 0 else 0
         
-        # Calculate total hours parked
+        # total hours parked
         total_hours = 0
         for res in reservations:
             if res.parking_start_time and res.parking_end_time:
@@ -754,7 +757,7 @@ def get_cost_analysis_charts():
         if error_response:
             return error_response, status_code
         
-        # Get time period
+        # Time period
         days = request.args.get('days', 90, type=int)
         start_date = datetime.utcnow() - timedelta(days=days)
         
@@ -786,7 +789,7 @@ def get_cost_analysis_charts():
                 time_cost[hour]['total_cost'] += res.total_cost
                 time_cost[hour]['sessions'] += 1
         
-        # Calculate average cost per hour
+        # average cost per hour
         avg_cost_by_hour = {}
         for hour in range(24):
             if time_cost[hour]['sessions'] > 0:
@@ -794,7 +797,7 @@ def get_cost_analysis_charts():
             else:
                 avg_cost_by_hour[hour] = 0
         
-        # 3. Efficiency Analysis (Cost per hour for each lot)
+        # 3. Efficiency Analysis
         lot_efficiency = {}
         for res in reservations:
             spot = ParkingSpot.query.get(res.spot_id)
@@ -806,12 +809,12 @@ def get_cost_analysis_charts():
                         lot_efficiency[lot_name] = {'total_cost': 0, 'total_hours': 0}
                     
                     duration = res.parking_end_time - res.parking_start_time
-                    hours = max(duration.total_seconds() / 3600, 1)  # Minimum 1 hour
+                    hours = max(duration.total_seconds() / 3600, 1)  
                     
                     lot_efficiency[lot_name]['total_cost'] += res.total_cost or 0
                     lot_efficiency[lot_name]['total_hours'] += hours
         
-        # Calculate cost per hour for each lot
+   
         for lot_name in lot_efficiency:
             if lot_efficiency[lot_name]['total_hours'] > 0:
                 cost_per_hour = lot_efficiency[lot_name]['total_cost'] / lot_efficiency[lot_name]['total_hours']
@@ -821,7 +824,7 @@ def get_cost_analysis_charts():
         
         # 4. Weekly Cost Comparison
         weekly_costs = {}
-        for i in range(4):  # Last 4 weeks
+        for i in range(4):  
             week_start = datetime.utcnow() - timedelta(weeks=i+1)
             week_end = week_start + timedelta(days=7)
             week_key = f"Week {i+1}"
@@ -978,7 +981,7 @@ def format_duration(start_time, end_time):
 def calculate_user_statistics(user_id):
     """Calculate comprehensive user statistics"""
     try:
-        # Get all user reservations
+       
         all_reservations = Reservation.query.filter_by(user_id=user_id).all()
         completed_reservations = [r for r in all_reservations if r.status == 'completed']
         
@@ -997,7 +1000,7 @@ def calculate_user_statistics(user_id):
         }
         
         if completed_reservations:
-            # Calculate total hours and averages
+           
             total_hours = 0
             valid_durations = []
             

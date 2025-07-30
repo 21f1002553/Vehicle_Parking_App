@@ -1,7 +1,4 @@
-/**
- * UserHistory.vue.js - User Parking History Component
- * Displays detailed parking history with cost breakdown
- */
+
 
 window.UserHistoryComponent = {
     name: 'UserHistory',
@@ -339,7 +336,7 @@ window.UserHistoryComponent = {
             const current = this.pagination.page || 1;
             const total = this.pagination.pages || 1;
             
-            // Show up to 5 pages around current page
+            
             const start = Math.max(1, current - 2);
             const end = Math.min(total, current + 2);
             
@@ -443,7 +440,7 @@ window.UserHistoryComponent = {
     }
 };
 
-// Register component globally
+
 if (window.Vue) {
     console.log('✅ UserHistory component registered');
 }

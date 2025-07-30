@@ -97,7 +97,8 @@ def get_profile():
 
 @auth_bp.route('/test', methods=['GET'])
 def test_auth_routes():
-    """Test endpoint to verify auth routes are working"""
+    
+    
     return jsonify({
         'message': 'Auth routes are working!',
         'available_endpoints': [

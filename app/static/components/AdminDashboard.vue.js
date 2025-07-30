@@ -1,7 +1,4 @@
-/**
- * AdminDashboard.vue.js - Main Admin Dashboard Component
- * Core admin functionality for parking lot and user management
- */
+//Admin Dash
 
 window.AdminDashboardComponent = {
     name: 'AdminDashboard',
@@ -303,7 +300,7 @@ window.AdminDashboardComponent = {
 
     data() {
         return {
-            loading: true,
+            loading: false,
             error: null,
             statistics: {
                 total_users: 0,
@@ -342,19 +339,19 @@ window.AdminDashboardComponent = {
             this.error = null;
 
             try {
-                // Load dashboard statistics
+                // Dashboard statistics
                 const dashboardResponse = await window.api.getAdminDashboard();
                 this.statistics = dashboardResponse.statistics || {};
                 this.recentReservations = dashboardResponse.recent_reservations || [];
 
-                // Load parking lots
+                // Parking lots
                 const lotsResponse = await window.api.getAdminParkingLots();
                 this.parkingLots = lotsResponse.parking_lots || [];
 
-                console.log('✅ Dashboard data loaded successfully');
+                console.log('Dashboard data loaded successfully');
 
             } catch (error) {
-                console.error('❌ Failed to load dashboard data:', error);
+                console.error('Failed to load dashboard data:', error);
                 this.error = 'Failed to load dashboard data. Please try again.';
             } finally {
                 this.loading = false;
@@ -490,5 +487,5 @@ window.AdminDashboardComponent = {
 
 // Register component globally
 if (window.Vue) {
-    console.log('✅ AdminDashboard component registered');
+    console.log('AdminDashboard component registered');
 }

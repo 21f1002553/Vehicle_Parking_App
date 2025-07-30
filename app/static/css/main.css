@@ -1,8 +1,4 @@
-/* ============================================================================
-   Vehicle Parking System - Complete Main Stylesheet
-   ============================================================================ */
 
-/* CSS Variables for theming */
 :root {
     --primary-color: #0d6efd;
     --secondary-color: #6c757d;
@@ -27,7 +23,7 @@
     --border-radius-lg: 0.5rem;
 }
 
-/* Global Styles */
+
 * {
     box-sizing: border-box;
 }
@@ -361,9 +357,9 @@ h1, h2, h3, h4, h5, h6 {
     margin-top: auto;
 }
 
-/* ============================================================================
+
    AUTHENTICATION PAGES STYLES
-   ============================================================================ */
+  
 
 /* Auth Page Body */
 .auth-page {

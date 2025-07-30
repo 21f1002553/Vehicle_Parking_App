@@ -1,7 +1,5 @@
-/**
- * AuthLayout.vue.js - Authentication Layout Component
- * Clean, centered layout for login and registration pages
- */
+
+ //Authentication Layout Component
 
 window.AuthLayoutComponent = {
     name: 'AuthLayout',
@@ -74,7 +72,7 @@ window.AuthLayoutComponent = {
     }
 };
 
-// Register component globally
+
 if (window.Vue) {
     window.Vue.createApp({}).component('auth-layout', window.AuthLayoutComponent);
 }

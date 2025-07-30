@@ -1,10 +1,7 @@
-/**
- * Main Vue.js Application - Updated with FallbackDashboard
- */
 
 // Enhanced initialization with better error handling
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM loaded, initializing Vehicle Parking System...');
+    console.log('DOM loaded, initializing Vehicle Parking System...');
 
     // Check for required libraries with fallbacks
     if (!window.Vue) {
@@ -42,21 +39,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 HistoryReportsComponent: !!window.HistoryReportsComponent,
                 
                 // Dashboard Components
-                UserDashboard: !!window.UserDashboard,
-                AdminDashboard: !!window.AdminDashboard,
-                UserDashboardCharts: !!window.UserDashboardCharts,
-                AdminDashboardCharts: !!window.AdminDashboardCharts,
+                UserDashboard: !!window.UserDashboardComponent,
+                AdminDashboard: !!window.AdminDashboardComponent,
+                UserDashboardCharts: !!window.UserDashboardChartsComponent,
+                AdminDashboardCharts: !!window.AdminDashboardChartsComponent,
                 
                 // Feature Components
-                AdminParkingLots: !!window.AdminParkingLots,
-                UserHistory: !!window.UserHistory,
-                UserSpotReservation: !!window.UserSpotReservation
+                AdminParkingLots: !!window.AdminParkingLotsComponent,
+                UserHistory: !!window.UserHistoryComponent,
+                UserSpotReservation: !!window.UserSpotReservationComponent
             };
 
-            console.log('📦 Components availability:', componentsAvailable);
-            updateDebug('components-status', `✅ ${Object.values(componentsAvailable).filter(Boolean).length}/12 Loaded`);
 
-            // Create fallback dashboard component (moved from HTML template)
+            // fallback dashboard component (moved from HTML template)
             const FallbackDashboard = {
                 template: `
                     <div class="container mt-4">
@@ -181,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 async mounted() {
                     console.log('📊 Dashboard mounted');
-                    updateDebug('current-route', `✅ ${this.$route.path}`);
+                    updateDebug('current-route', `${this.$route.path}`);
                     
                     // Auto-load data
                     await this.loadProfile();
@@ -240,11 +235,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     path: '/register', 
                     component: window.RegisterComponent || FallbackDashboard
                 },
-                // Find this section in your routes array
+           
                 { 
                     path: '/user/dashboard', 
                     name: 'user-dashboard',
-                    component: window.UserDashboardComponent || createDashboardComponent('user'),
+                    component: window.UserDashboardComponent || createDashboardComponent('user'),  
                     meta: { requiresAuth: true, role: 'user' }
                 },
 
@@ -254,31 +249,41 @@ document.addEventListener('DOMContentLoaded', function() {
                     component: window.UserSpotReservationComponent || createPlaceholderComponent('Reserve Parking', 'Reservation system will appear here.'),
                     meta: { requiresAuth: true, role: 'user' }
                 },
-
                 { 
-                    path: '/user/history', 
-                    name: 'user-history',
-                    component: window.UserHistoryComponent || createPlaceholderComponent('Parking History', 'Your parking history will appear here.'),
+                    path: '/user/reserve', 
+                    name: 'user-reserve',
+                    component: window.UserSpotReservationComponent || createPlaceholderComponent('Reserve Parking', 'Reservation system will appear here.'), 
                     meta: { requiresAuth: true, role: 'user' }
                 },
                 { 
+                    path: '/user/history', 
+                    name: 'user-history',
+                    component: window.UserHistoryComponent || createPlaceholderComponent('Parking History', 'Your parking history will appear here.'),  
+                    meta: { requiresAuth: true, role: 'user' }
+                },
+                {  
                     path: '/user/analytics', 
-                    component: window.UserDashboardCharts || FallbackDashboard,
-                    meta: { requiresAuth: true }
+                    name:'user-analytics',
+                    component: window.UserDashboardChartsComponent|| createPlaceholderComponent('User Analytics', 'Analytics'),
+                    meta: { requiresAuth: true, role: 'user' }
                 },
                 { 
                     path: '/admin/dashboard', 
-                    component: window.AdminDashboard || FallbackDashboard,
-                    meta: { requiresAuth: true, requiresAdmin: true }
+                    name: 'admin-dashboard',
+                    component: window.AdminDashboardComponent || createDashboardComponent('admin'), 
+                    meta: { requiresAuth: true, role: 'admin' }
                 },
                 { 
                     path: '/admin/lots', 
-                    component: window.AdminParkingLots || FallbackDashboard,
-                    meta: { requiresAuth: true, requiresAdmin: true }
+                    name: 'admin-lots',
+                    component: window.AdminParkingLotsComponent || createPlaceholderComponent('Manage Parking Lots', 'Parking lots management will appear here.'),  
+                    meta: { requiresAuth: true, role: 'admin' }
                 },
                 { 
-                    path: '/admin/analytics', 
-                    component: window.AdminDashboardCharts || FallbackDashboard,
+                    path: '/admin/analytics',
+                    name: 'Admin-analytics',
+                    component: window.AdminDashboardChartsComponent ||
+                    createPlaceholderComponent('Admin Analytics', 'Analytics'),
                     meta: { requiresAuth: true, requiresAdmin: true }
                 }
             ];

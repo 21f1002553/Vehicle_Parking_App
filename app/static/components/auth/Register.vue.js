@@ -1,6 +1,5 @@
 /**
- * Register.vue.js - Registration Component
- * Handles new user registration with validation
+ * Registration Component
  */
 
 window.RegisterComponent = {
@@ -367,7 +366,7 @@ window.RegisterComponent = {
 
     methods: {
         /**
-         * Handle registration form submission
+         * registration form submission
          */
         async handleRegister() {
             if (!this.isFormValid || this.loading) return;
@@ -407,9 +406,7 @@ window.RegisterComponent = {
             }
         },
 
-        /**
-         * Get user-friendly error message
-         */
+        
         getErrorMessage(error) {
             if (error.message.includes('Email already registered')) {
                 return 'An account with this email already exists. Try signing in instead.';
@@ -422,7 +419,7 @@ window.RegisterComponent = {
         },
 
         /**
-         * Validate individual form field
+         * individual form 
          */
         validateField(field) {
             this.errors = { ...this.errors };
@@ -507,9 +504,8 @@ window.RegisterComponent = {
             }
         },
 
-        /**
-         * Get CSS classes for form field
-         */
+      
+         
         getFieldClass(field) {
             const baseClass = 'form-control';
             if (this.errors[field]) {
@@ -520,9 +516,7 @@ window.RegisterComponent = {
             return baseClass;
         },
 
-        /**
-         * Get CSS classes for checkbox field
-         */
+        
         getCheckboxClass(field) {
             const baseClass = 'form-check-input';
             if (this.errors[field]) {
@@ -533,31 +527,25 @@ window.RegisterComponent = {
             return baseClass;
         },
 
-        /**
-         * Toggle password visibility
-         */
+      
         togglePassword() {
             this.showPassword = !this.showPassword;
         },
 
-        /**
-         * Format phone number input
-         */
+        
         formatPhone() {
-            // Remove non-digits
+            
             this.form.phone = this.form.phone.replace(/\D/g, '');
             
-            // Validate while typing
+            
             if (this.form.phone) {
                 this.validateField('phone');
             }
         },
 
-        /**
-         * Format PIN code input
-         */
+        
         formatPinCode() {
-            // Remove non-digits
+           
             this.form.pin_code = this.form.pin_code.replace(/\D/g, '');
             
             // Validate while typing
@@ -566,19 +554,14 @@ window.RegisterComponent = {
             }
         },
 
-        /**
-         * Check password strength while typing
-         */
+       
         checkPasswordStrength() {
-            // Trigger validation
+          
             if (this.form.password) {
                 this.validateField('password');
             }
         },
 
-        /**
-         * Reset form to initial state
-         */
         resetForm() {
             this.form = {
                 username: '',

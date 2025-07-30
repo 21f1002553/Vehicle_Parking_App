@@ -1,7 +1,4 @@
-/**
- * Authentication Management
- * Handles JWT tokens, user state, and auth-related functionality
- */
+
 
 class AuthService {
     constructor() {
@@ -9,13 +6,13 @@ class AuthService {
         this.isAuthenticated = false;
         this.token = localStorage.getItem('access_token');
         
-        // Initialize auth state on load
+  
         this.initializeAuth();
     }
 
-    /**
-     * Initialize authentication state
-     */
+    
+    //authentication state
+    
     async initializeAuth() {
         if (this.token) {
             try {
@@ -32,9 +29,9 @@ class AuthService {
             }
         }
     }
-    /**
-     * Load user profile from API
-     */
+    
+     //Load user profile from API
+     
     async loadUserProfile() {
         try {
             const response = await window.api.getProfile();
@@ -46,9 +43,7 @@ class AuthService {
         }
     }
 
-    /**
-     * Set current user and auth state
-     */
+    
     setUser(user) {
         this.currentUser = user;
         this.isAuthenticated = true;
@@ -61,9 +56,7 @@ class AuthService {
         console.log('👤 User set:', user.username, user.is_admin ? '(Admin)' : '(User)');
     }
 
-    /**
-     * Clear authentication state
-     */
+    
     clearAuth() {
         this.currentUser = null;
         this.isAuthenticated = false;
@@ -71,15 +64,13 @@ class AuthService {
         
         localStorage.removeItem('access_token');
         
-        // Emit auth cleared event
+        
         window.dispatchEvent(new CustomEvent('auth-cleared'));
         
         console.log('🔓 Authentication cleared');
     }
 
-    /**
-     * Login user
-     */
+    
     async login(email, password) {
         try {
             const response = await window.api.login(email, password);
@@ -88,7 +79,7 @@ class AuthService {
                 this.token = response.access_token;
                 this.setUser(response.user);
                 
-                // Emit login success event
+               
                 window.dispatchEvent(new CustomEvent('login-success', { 
                     detail: { user: response.user } 
                 }));
@@ -103,14 +94,12 @@ class AuthService {
         }
     }
 
-    /**
-     * Register new user
-     */
+    
     async register(userData) {
         try {
             const response = await window.api.register(userData);
             
-            // Auto-login after successful registration
+        
             if (response.user) {
                 console.log('✅ Registration successful, attempting auto-login');
                 await this.login(userData.email, userData.password);
@@ -123,57 +112,43 @@ class AuthService {
         }
     }
 
-    /**
-     * Logout user
-     */
+   
     logout() {
         window.api.logout();
         this.clearAuth();
         
-        // Emit logout event
+    
         window.dispatchEvent(new CustomEvent('logout'));
         
         console.log('👋 User logged out');
     }
 
-    /**
-     * Check if user is admin
-     */
+ 
     isAdmin() {
         return this.currentUser && this.currentUser.is_admin;
     }
 
-    /**
-     * Check if user is regular user
-     */
+   
     isUser() {
         return this.currentUser && !this.currentUser.is_admin;
     }
 
-    /**
-     * Get user's display name
-     */
+   
     getUserDisplayName() {
         if (!this.currentUser) return 'Guest';
         return this.currentUser.full_name || this.currentUser.username || 'User';
     }
 
-    /**
-     * Get user's role
-     */
     getUserRole() {
         if (!this.currentUser) return 'guest';
         return this.currentUser.is_admin ? 'admin' : 'user';
     }
 
-    /**
-     * Check if token is expired (basic check)
-     */
     isTokenExpired() {
         if (!this.token) return true;
         
         try {
-            // Decode JWT payload (basic check - in production use proper JWT library)
+          
             const payload = JSON.parse(atob(this.token.split('.')[1]));
             const now = Date.now() / 1000;
             
@@ -184,9 +159,7 @@ class AuthService {
         }
     }
 
-    /**
-     * Refresh authentication state
-     */
+    
     async refreshAuth() {
         if (!this.token || this.isTokenExpired()) {
             this.clearAuth();
@@ -234,9 +207,6 @@ class AuthService {
         return true;
     }
 
-    /**
-     * Get redirect path after login based on user role
-     */
     getRedirectPath() {
         if (this.isAdmin()) {
             return '/admin/dashboard';
@@ -252,7 +222,7 @@ window.auth = new AuthService();
 
 // Global auth event listeners
 window.addEventListener('auth-error', () => {
-    console.log('🔴 Auth error detected, clearing auth state');
+    console.log('Auth error detected, clearing auth state');
     window.auth.clearAuth();
 });
 
@@ -260,7 +230,7 @@ window.addEventListener('storage', (e) => {
     // Handle token changes in other tabs
     if (e.key === 'access_token') {
         if (e.newValue !== window.auth.token) {
-            console.log('🔄 Token changed in another tab, refreshing auth');
+            console.log('Token changed in another tab, refreshing auth');
             window.auth.token = e.newValue;
             if (e.newValue) {
                 window.auth.initializeAuth();
@@ -304,8 +274,8 @@ window.authUtils = {
     getUserRole: () => window.auth.getUserRole()
 };
 
-console.log('🔧 Auth Service initialized');
-console.log('🔑 Authenticated:', window.auth.isAuthenticated);
+console.log('Auth Service initialized');
+console.log('Authenticated:', window.auth.isAuthenticated);
 if (window.auth.currentUser) {
-    console.log('👤 Current user:', window.auth.currentUser.username);
+    console.log('Current user:', window.auth.currentUser.username);
 }
