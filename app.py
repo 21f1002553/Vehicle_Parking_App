@@ -5,18 +5,16 @@ from datetime import timedelta
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
+
 load_dotenv()
 
-# Initialize extensions (but don't bind to app yet)
+
 from app.models import db
 jwt = JWTManager()
 
 def create_app():
-    """Application factory pattern"""
-    print("🔧 Creating Flask app...")
     
-    # Explicitly set template and static folders relative to app.py location
+    
     app = Flask(__name__, 
                 template_folder='app/templates',
                 static_folder='app/static')
@@ -28,7 +26,7 @@ def create_app():
     app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-change-this')
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
     
-    # Initialize extensions with app
+    # Initialize extensions 
     db.init_app(app)
     jwt.init_app(app)
     CORS(app, resources={r"/api/*": {"origins": "*"}}, 
@@ -36,10 +34,10 @@ def create_app():
          allow_headers=['Content-Type', 'Authorization'])
   
     
-    # Register blueprints for API routes
+  
     register_blueprints(app)
     
-    # Register frontend routes
+  
     register_frontend_routes(app)
     
   
@@ -56,7 +54,7 @@ def register_blueprints(app):
     from app.routes.user import user_bp
     from app.routes.admin import admin_bp
     
-    # Register blueprints with URL prefixes
+   
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(user_bp, url_prefix='/api/user')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
@@ -75,7 +73,7 @@ def register_frontend_routes(app):
         return render_template('api_test.html')
  
     
-    # API health check endpoint
+
     @app.route('/api/health')
     def health_check():
         return jsonify({
@@ -147,17 +145,17 @@ def init_database(app):
     """Initialize database with tables and sample data"""
     with app.app_context():
         try:
-            # Import all models to ensure they're registered
+        
             from app.models.user import User
             from app.models.parking_lot import ParkingLot
             from app.models.parking_spot import ParkingSpot
             from app.models.reservation import Reservation
             
-            # Create all tables
+      
             db.create_all()
             
             
-            # Create admin user if doesn't exist
+            # Create admin user
             admin = User.query.filter_by(email='admin@parking.com').first()
             if not admin:
                 admin = User(
@@ -173,7 +171,7 @@ def init_database(app):
                 db.session.add(admin)
                
             
-            # Create test user if doesn't exist
+            # Create test user 
             test_user = User.query.filter_by(email='user@test.com').first()
             if not test_user:
                 test_user = User(
@@ -189,42 +187,42 @@ def init_database(app):
                 db.session.add(test_user)
               
             
-            # Create sample parking lots with Indian locations
+            # Create sample parking lots 
             sample_lots = [
                 {
                     'name': 'Downtown Mall',
                     'address': 'Forum Mall, Koramangala, Bangalore',
                     'pin_code': '560034',
                     'total_spots': 50,
-                    'price_per_hour': 50.0    # ₹50/hour (typical mall parking)
+                    'price_per_hour': 50.0    
                 },
                 {
                     'name': 'Airport Parking',
                     'address': 'Kempegowda International Airport, Bangalore',
                     'pin_code': '560300',
                     'total_spots': 100,
-                    'price_per_hour': 100.0   # ₹100/hour (airport premium)
+                    'price_per_hour': 100.0   
                 },
                 {
                     'name': 'Metro Station',
                     'address': 'MG Road Metro Station, Bangalore',
                     'pin_code': '560001',
                     'total_spots': 30,
-                    'price_per_hour': 20.0    # ₹20/hour (government metro parking)
+                    'price_per_hour': 20.0    
                 },
                 {
                     'name': 'IT Park',
                     'address': 'Electronic City, Bangalore',
                     'pin_code': '560100',
                     'total_spots': 200,
-                    'price_per_hour': 30.0    # ₹30/hour (office complex)
+                    'price_per_hour': 30.0    
                 },
                 {
                     'name': 'Commercial Street',
                     'address': 'Commercial Street, Brigade Road, Bangalore',
                     'pin_code': '560001',
                     'total_spots': 25,
-                    'price_per_hour': 40.0    # ₹40/hour (premium shopping area)
+                    'price_per_hour': 40.0    
                 }
             ]
             
@@ -241,11 +239,11 @@ def init_database(app):
                     db.session.add(lot)
                     db.session.commit()
                     
-                    # Auto-generate parking spots for each lot
+                    
                     for i in range(1, lot.total_spots + 1):
                         spot = ParkingSpot(
                             lot_id=lot.id,
-                            spot_number=f"{lot.name[0]}{i:03d}"  # e.g., D001, A001, M001
+                            spot_number=f"{lot.name[0]}{i:03d}"  
                         )
                         db.session.add(spot)
                     
@@ -257,23 +255,23 @@ def init_database(app):
             print(f"⚠️  Database initialization error: {e}")
             db.session.rollback()
 
-# Create app instance
+
 app = create_app()
 
-# FIXED Error handlers - This was the main problem!
+# FIXED Error handlers 
 @app.errorhandler(404)
 def not_found(error):
-    """Handle 404 errors - """
-    # For API endpoints, return JSON 404
+    
+    # For API endpoints JSON 404
     if request.path.startswith('/api/'):
         return jsonify({'error': 'API endpoint not found'}), 404
     
-    # For static files, let Flask handle it properly (don't redirect to SPA)
+    
     if request.path.startswith('/static/'):
-        # Return proper 404 for missing static files instead of HTML
+       
         return "File not found", 404
     
-    # For all other routes (SPA client-side routes), serve the Vue.js app
+    
     return render_template('index.html')
 
 @app.errorhandler(500)
@@ -284,7 +282,7 @@ def internal_error(error):
     else:
         return render_template('index.html')
 
-# Context processor to inject configuration into templates
+
 @app.context_processor
 def inject_config():
     """Inject configuration variables into templates"""
@@ -297,7 +295,7 @@ def inject_config():
 
 if __name__ == '__main__':
     
-    # Initialize database
+   
     init_database(app)
     
     

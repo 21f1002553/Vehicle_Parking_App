@@ -230,7 +230,7 @@ window.addEventListener('storage', (e) => {
     // Handle token changes in other tabs
     if (e.key === 'access_token') {
         if (e.newValue !== window.auth.token) {
-            console.log('Token changed in another tab, refreshing auth');
+            console.log('🔄 Token changed in another tab, refreshing auth');
             window.auth.token = e.newValue;
             if (e.newValue) {
                 window.auth.initializeAuth();
@@ -274,8 +274,8 @@ window.authUtils = {
     getUserRole: () => window.auth.getUserRole()
 };
 
-console.log('Auth Service initialized');
-console.log('Authenticated:', window.auth.isAuthenticated);
+console.log('🔧 Auth Service initialized');
+console.log('🔑 Authenticated:', window.auth.isAuthenticated);
 if (window.auth.currentUser) {
-    console.log('Current user:', window.auth.currentUser.username);
+    console.log('👤 Current user:', window.auth.currentUser.username);
 }
