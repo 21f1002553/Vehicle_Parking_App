@@ -18,7 +18,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
 <body>
-
     <div id="app">
         <!-- Loading Screen -->
         <div id="loading-container" class="loading-container">
@@ -66,19 +65,24 @@
             VERSION: '4.0'
         };
 
-        // Debug Helper Functions
+        // Debug Helper Functions (simplified without debug panel)
+        function updateLoadingMessage(message) {
+            console.log('📱', message);
+            const loadingMessage = document.getElementById('loading-message');
+            if (loadingMessage) loadingMessage.textContent = message;
+        }
+        
+        // Add the missing updateDebug function
         function updateDebug(key, value) {
+            // Since debug panel is removed, just log to console
+            console.log(`Debug [${key}]:`, value);
+            
+            // Optional: You can still try to update elements if they exist
             const element = document.getElementById(key);
             if (element) {
                 element.textContent = value;
                 element.style.color = value.includes('✅') ? '#28a745' : '#dc3545';
             }
-        }
-
-        function updateLoadingMessage(message) {
-            console.log('📱', message);
-            const loadingMessage = document.getElementById('loading-message');
-            if (loadingMessage) loadingMessage.textContent = message;
         }
         
         function showError(error) {
@@ -161,10 +165,43 @@
     <script src="{{ url_for('static', filename='components/AdminParkingLots.vue.js') }}"></script>
     <script src="{{ url_for('static', filename='components/UserHistory.vue.js') }}"></script>
     <script src="{{ url_for('static', filename='components/UserSpotReservation.vue.js') }}"></script>
-    <!-- Load User Components -->
-
+    
+    <!-- ADD THIS: Admin User Management Component -->
+    <script src="{{ url_for('static', filename='components/AdminManagement.vue.js') }}"></script>
 
     <!-- Main Application Script (All Vue.js code moved here) -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <!-- Add this script temporarily at the end of your index.html before </body> to verify components -->
+<script>
+    // Temporary debug script to verify component loading
+    setTimeout(() => {
+        console.log('🔍 Component Loading Verification:');
+        console.log('=====================================');
+        
+        // Check if AdminUserManagementComponent exists
+        if (window.AdminUserManagementComponent) {
+            console.log('✅ AdminUserManagementComponent is loaded!');
+            console.log('   - Component name:', window.AdminUserManagementComponent.name);
+            console.log('   - Has template:', !!window.AdminUserManagementComponent.template);
+            console.log('   - Has data function:', typeof window.AdminUserManagementComponent.data === 'function');
+            console.log('   - Has methods:', !!window.AdminUserManagementComponent.methods);
+        } else {
+            console.error('❌ AdminUserManagementComponent NOT FOUND!');
+            console.log('   Please check:');
+            console.log('   1. File exists at: app/static/components/AdminManagement.vue.js');
+            console.log('   2. File is being loaded in index.html');
+            console.log('   3. No JavaScript errors in the file');
+        }
+        
+        // List all loaded components
+        console.log('\n📦 All loaded Vue components:');
+        const components = Object.keys(window).filter(key => key.includes('Component'));
+        components.forEach(comp => {
+            console.log(`   - ${comp}: ${window[comp] ? '✅' : '❌'}`);
+        });
+        
+        console.log('=====================================');
+    }, 3000); // Wait 3 seconds for all components to load
+</script>
 </body>
 </html>

@@ -1,4 +1,3 @@
-
 // Enhanced initialization with better error handling
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing Vehicle Parking System...');
@@ -46,169 +45,69 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Feature Components
                 AdminParkingLots: !!window.AdminParkingLotsComponent,
+                AdminUserManagement: !!window.AdminUserManagementComponent, // ADD THIS
                 UserHistory: !!window.UserHistoryComponent,
                 UserSpotReservation: !!window.UserSpotReservationComponent
             };
 
+            console.log('📦 Components availability:', componentsAvailable);
 
-            // fallback dashboard component (moved from HTML template)
-            const FallbackDashboard = {
-                template: `
-                    <div class="container mt-4">
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="d-flex justify-content-between align-items-center mb-4">
-                                    <h1><i class="fas fa-tachometer-alt me-2"></i>{{title}}</h1>
-                                    <button @click="logout" class="btn btn-outline-danger">
-                                        <i class="fas fa-sign-out-alt me-2"></i>Logout
-                                    </button>
-                                </div>
-                                
-                                <div class="alert alert-success">
-                                    <h5><i class="fas fa-check-circle me-2"></i>All Components Loaded!</h5>
-                                    <p class="mb-0">Your Vehicle Parking System is ready. Components loaded: {{componentCount}}/12</p>
-                                </div>
-
-                                <!-- Quick Stats -->
-                                <div class="row mb-4">
-                                    <div class="col-md-6">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <h5><i class="fas fa-database me-2"></i>Available Parking Lots</h5>
-                                                <div v-if="parkingLots.length > 0">
-                                                    <div v-for="lot in parkingLots" :key="lot.id" class="mb-2">
-                                                        <strong>{{lot.name}}</strong> - ₹{{lot.price_per_hour}}/hour<br>
-                                                        <small class="text-muted">{{lot.available_spots}}/{{lot.total_spots}} spots available</small>
-                                                    </div>
-                                                </div>
-                                                <div v-else>
-                                                    <button @click="loadParkingLots" class="btn btn-primary btn-sm">
-                                                        <i class="fas fa-sync me-1"></i>Load Parking Lots
-                                                    </button>
-                                                </div>
+            // Helper function to create placeholder component
+            function createPlaceholderComponent(title, description) {
+                return {
+                    template: `
+                        <div class="container mt-5">
+                            <div class="row justify-content-center">
+                                <div class="col-md-8">
+                                    <div class="card">
+                                        <div class="card-body text-center p-5">
+                                            <h2><i class="fas fa-construction me-2"></i>${title}</h2>
+                                            <p class="text-muted">${description}</p>
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                This feature is under development and will be available soon.
                                             </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <h5><i class="fas fa-user me-2"></i>Your Profile</h5>
-                                                <div v-if="userProfile">
-                                                    <p><strong>Name:</strong> {{userProfile.full_name}}</p>
-                                                    <p><strong>Email:</strong> {{userProfile.email}}</p>
-                                                    <p><strong>Role:</strong> <span v-if="userProfile.is_admin">Administrator</span><span v-else>Standard User</span></p>
-                                                    <p class="mb-0"><strong>Status:</strong> <span v-if="userProfile.is_active" class="text-success">Active</span><span v-else class="text-danger">Inactive</span></p>
-                                                </div>
-                                                <div v-else>
-                                                    <button @click="loadProfile" class="btn btn-primary btn-sm">
-                                                        <i class="fas fa-sync me-1"></i>Load Profile
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Component Status -->
-                                <div class="row">
-                                    <div class="col-12">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <h5><i class="fas fa-puzzle-piece me-2"></i>Component Status</h5>
-                                            </div>
-                                            <div class="card-body">
-                                                <div class="row">
-                                                    <div class="col-md-6">
-                                                        <h6>✅ Loaded Components:</h6>
-                                                        <ul class="small">
-                                                            <li v-for="(loaded, name) in componentsAvailable" v-if="loaded" :key="name">
-                                                                {{name}}
-                                                            </li>
-                                                        </ul>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <h6>Available Actions:</h6>
-                                                        <div class="btn-group-vertical d-grid gap-2" v-if="userProfile">
-                                                            <router-link v-if="userProfile.is_admin" to="/admin/lots" class="btn btn-outline-primary btn-sm">
-                                                                <i class="fas fa-building me-1"></i>Manage Parking Lots
-                                                            </router-link>
-                                                            <router-link v-if="userProfile.is_admin" to="/admin/analytics" class="btn btn-outline-success btn-sm">
-                                                                <i class="fas fa-chart-bar me-1"></i>View Analytics
-                                                            </router-link>
-                                                            <router-link v-if="!userProfile.is_admin" to="/user/reserve" class="btn btn-outline-primary btn-sm">
-                                                                <i class="fas fa-car me-1"></i>Reserve Parking
-                                                            </router-link>
-                                                            <router-link v-if="!userProfile.is_admin" to="/user/history" class="btn btn-outline-info btn-sm">
-                                                                <i class="fas fa-history me-1"></i>View History
-                                                            </router-link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="mt-3 text-center">
-                                                    <a href="/api-test" class="btn btn-outline-secondary me-2">
-                                                        <i class="fas fa-flask me-1"></i>API Test Suite
-                                                    </a>
-                                                    <button @click="testComponentLoad" class="btn btn-outline-info">
-                                                        <i class="fas fa-bug me-1"></i>Debug Components
-                                                    </button>
-                                                </div>
-                                            </div>
+                                            <router-link to="/" class="btn btn-primary">
+                                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                                            </router-link>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                `,
-                data() {
-                    return {
-                        parkingLots: [],
-                        userProfile: null,
-                        componentCount: Object.values(componentsAvailable).filter(Boolean).length,
-                        componentsAvailable: componentsAvailable
-                    }
-                },
-                computed: {
-                    title() {
-                        return window.authUtils?.isAdmin() ? 'Admin Dashboard' : 'User Dashboard';
-                    }
-                },
-                async mounted() {
-                    console.log('📊 Dashboard mounted');
-                    updateDebug('current-route', `${this.$route.path}`);
-                    
-                    // Auto-load data
-                    await this.loadProfile();
-                    await this.loadParkingLots();
-                },
-                methods: {
-                    async loadProfile() {
-                        try {
-                            const response = await window.api.getProfile();
-                            this.userProfile = response.user;
-                        } catch (error) {
-                            console.error('Failed to load profile:', error);
+                    `
+                };
+            }
+
+            // Helper function to create dashboard component
+            function createDashboardComponent(role) {
+                return {
+                    template: `
+                        <div class="container mt-4">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                        <h1><i class="fas fa-tachometer-alt me-2"></i>${role === 'admin' ? 'Admin' : 'User'} Dashboard</h1>
+                                        <button @click="logout" class="btn btn-outline-danger">
+                                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="alert alert-info">
+                                        <p class="mb-0">Welcome to your dashboard!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    methods: {
+                        logout() {
+                            window.auth?.logout();
+                            this.$router.push('/login');
                         }
-                    },
-                    async loadParkingLots() {
-                        try {
-                            const response = await window.api.getParkingLots();
-                            this.parkingLots = response.parking_lots || [];
-                        } catch (error) {
-                            console.error('Failed to load parking lots:', error);
-                        }
-                    },
-                    testComponentLoad() {
-                        console.log('🧪 Component Test Results:', componentsAvailable);
-                        alert(`Components Status:\n${Object.entries(componentsAvailable).map(([name, loaded]) => `${name}: ${loaded ? '✅' : '❌'}`).join('\n')}`);
-                    },
-                    logout() {
-                        window.auth?.logout();
-                        this.$router.push('/login');
                     }
-                }
-            };
+                };
+            }
 
             // Define routes with your actual components
             const routes = [
@@ -222,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 { 
                     path: '/login', 
-                    component: window.LoginComponent || FallbackDashboard,
+                    component: window.LoginComponent || createPlaceholderComponent('Login', 'Login component'),
                     beforeEnter: (to, from, next) => {
                         if (window.authUtils?.isLoggedIn()) {
                             next('/');
@@ -233,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 { 
                     path: '/register', 
-                    component: window.RegisterComponent || FallbackDashboard
+                    component: window.RegisterComponent || createPlaceholderComponent('Register', 'Register component')
                 },
            
                 { 
@@ -242,17 +141,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     component: window.UserDashboardComponent || createDashboardComponent('user'),  
                     meta: { requiresAuth: true, role: 'user' }
                 },
-
                 { 
                     path: '/user/reserve', 
                     name: 'user-reserve',
                     component: window.UserSpotReservationComponent || createPlaceholderComponent('Reserve Parking', 'Reservation system will appear here.'),
-                    meta: { requiresAuth: true, role: 'user' }
-                },
-                { 
-                    path: '/user/reserve', 
-                    name: 'user-reserve',
-                    component: window.UserSpotReservationComponent || createPlaceholderComponent('Reserve Parking', 'Reservation system will appear here.'), 
                     meta: { requiresAuth: true, role: 'user' }
                 },
                 { 
@@ -264,9 +156,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 {  
                     path: '/user/analytics', 
                     name:'user-analytics',
-                    component: window.UserDashboardChartsComponent|| createPlaceholderComponent('User Analytics', 'Analytics'),
+                    component: window.UserDashboardChartsComponent || createPlaceholderComponent('User Analytics', 'Analytics'),
                     meta: { requiresAuth: true, role: 'user' }
                 },
+                
+                // Admin Routes
                 { 
                     path: '/admin/dashboard', 
                     name: 'admin-dashboard',
@@ -279,12 +173,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     component: window.AdminParkingLotsComponent || createPlaceholderComponent('Manage Parking Lots', 'Parking lots management will appear here.'),  
                     meta: { requiresAuth: true, role: 'admin' }
                 },
+                // ADD THIS ROUTE FOR ADMIN USERS
+                { 
+                    path: '/admin/users', 
+                    name: 'admin-users',
+                    component: window.AdminUserManagementComponent || createPlaceholderComponent('Manage Users', 'User management will appear here.'),  
+                    meta: { requiresAuth: true, role: 'admin' }
+                },
                 { 
                     path: '/admin/analytics',
-                    name: 'Admin-analytics',
-                    component: window.AdminDashboardChartsComponent ||
-                    createPlaceholderComponent('Admin Analytics', 'Analytics'),
+                    name: 'admin-analytics',
+                    component: window.AdminDashboardChartsComponent || createPlaceholderComponent('Admin Analytics', 'Analytics'),
                     meta: { requiresAuth: true, requiresAdmin: true }
+                },
+                
+                // Catch-all route for 404
+                {
+                    path: '/:pathMatch(.*)*',
+                    component: createPlaceholderComponent('404 Not Found', 'The page you are looking for does not exist.')
                 }
             ];
 
@@ -323,7 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         loading: false,
                         error: null,
                         initializationComplete: false,
-                        loaded: true  // Add this line to fix the warning
+                        loaded: true
                     }
                 },
                 mounted() {
@@ -365,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1000); // Give components time to load
 });
 
-// Helper functions (rest of your existing main.js functions)
+// Helper functions
 function createFallbackComponent(componentName) {
     return {
         template: `
@@ -381,32 +287,6 @@ function createFallbackComponent(componentName) {
                             <router-link to="/" class="btn btn-primary">
                                 <i class="fas fa-home me-2"></i>Go Home
                             </router-link>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `
-    };
-}
-
-function createPlaceholderComponent(title, description) {
-    return {
-        template: `
-            <div class="container mt-5">
-                <div class="row justify-content-center">
-                    <div class="col-md-8">
-                        <div class="card">
-                            <div class="card-body text-center p-5">
-                                <h2><i class="fas fa-construction me-2"></i>${title}</h2>
-                                <p class="text-muted">${description}</p>
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    This feature is under development and will be available soon.
-                                </div>
-                                <router-link to="/" class="btn btn-primary">
-                                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-                                </router-link>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -490,4 +370,4 @@ window.addEventListener('unhandledrejection', (event) => {
     }
 });
 
-console.log('✅ Enhanced main.js loaded with separated Vue.js components');
+console.log('✅ Enhanced main.js loaded with admin users route');
